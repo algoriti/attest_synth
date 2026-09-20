@@ -10,6 +10,7 @@ instead of one per round trip.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -81,6 +82,8 @@ TEMPORAL_TYPES = {ColumnType.DATE, ColumnType.TIMESTAMP}
 
 def validate(spec: SyntheticDataSpec, engine_capabilities: dict | None = None) -> ValidationResult:
     result = ValidationResult()
+    if len(spec.tables) > 20:
+        result.findings.append(Finding(Severity.ERROR, "table_limit", "Use at most 20 tables."))
 
     if not spec.tables:
         result.findings.append(
@@ -114,6 +117,13 @@ def validate(spec: SyntheticDataSpec, engine_capabilities: dict | None = None) -
 
 def _validate_table(spec: SyntheticDataSpec, table: Table, result: ValidationResult) -> None:
     scope = table.name
+    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,63}", table.name):
+        result.findings.append(Finding(Severity.ERROR, "unsafe_table_name", "Table names must start with a letter and contain only letters, digits or underscores (64 characters maximum).", scope))
+    if len(table.columns) > 200 or (table.rows is not None and table.rows > 200000):
+        result.findings.append(Finding(Severity.ERROR, "resource_limit", "Use at most 200 columns and 200,000 rows per table.", scope))
+    for key in table.unique_keys:
+        if not key or len(set(key)) != len(key) or any(table.column(n) is None for n in key):
+            result.findings.append(Finding(Severity.ERROR, "invalid_unique_key", "A unique key needs distinct, existing columns.", scope))
 
     if not table.columns:
         result.findings.append(
@@ -173,7 +183,7 @@ def _validate_table(spec: SyntheticDataSpec, table: Table, result: ValidationRes
                 )
         _validate_constraint_types(table, constraint, result, scope)
 
-    if table.rows is not None and table.rows <= 0:
+    if table.rows is not None and table.rows < 0:
         result.findings.append(
             Finding(Severity.ERROR, "bad_row_count", f"Table '{table.name}' requests {table.rows} rows.", scope)
         )
@@ -377,6 +387,22 @@ def _validate_relationships(spec: SyntheticDataSpec, result: ValidationResult) -
                         f"Relationship uses '{rel.parent_key}' but '{parent.name}' declares "
                         f"primary key '{parent.primary_key}'.", scope)
             )
+        pk, fk = parent.column(rel.parent_key), child.column(rel.child_key)
+        if pk and fk:
+            if pk.role != SemanticRole.IDENTIFIER or parent.primary_key != pk.name:
+                result.findings.append(Finding(Severity.ERROR, "invalid_parent_key", "Use a regenerated identifier declared as the parent's primary key.", scope))
+            if fk.role == SemanticRole.DERIVED or fk.name == child.primary_key:
+                result.findings.append(Finding(Severity.ERROR, "invalid_foreign_key", "Foreign keys cannot be derived or also be the child primary key in this engine.", scope))
+            if pk.type != fk.type:
+                result.findings.append(Finding(Severity.ERROR, "key_type_mismatch", "Parent and child key types must match.", scope))
+            if rel.optional and not fk.nullable:
+                result.findings.append(Finding(Severity.ERROR, "optional_key_not_nullable", "An optional foreign key must be nullable.", scope))
+        if rel.null_fraction and not rel.optional:
+            result.findings.append(Finding(Severity.ERROR, "required_link_nulls", "Required relationships cannot request null keys.", scope))
+        if any(v is not None and v < 0 for v in (rel.child_count_min, rel.child_count_max)):
+            result.findings.append(Finding(Severity.ERROR, "negative_cardinality", "Child counts cannot be negative.", scope))
+        if rel.cardinality == "one_to_one" and any(v is not None and v > 1 for v in (rel.child_count_min, rel.child_count_max)):
+            result.findings.append(Finding(Severity.ERROR, "one_to_one_count", "One-to-one links allow at most one child per parent.", scope))
         if (
             rel.child_count_min is not None
             and rel.child_count_max is not None
@@ -386,6 +412,13 @@ def _validate_relationships(spec: SyntheticDataSpec, result: ValidationResult) -
                 Finding(Severity.ERROR, "bad_cardinality",
                         "Minimum child count exceeds the maximum.", scope)
             )
+
+    for table in spec.tables:
+        incoming = [r for r in spec.relationships if r.child_table == table.name]
+        if len(incoming) > 2 or (len(incoming) > 1 and any(r.null_fraction for r in incoming)):
+            result.findings.append(Finding(Severity.ERROR, "unsupported_relationship_shape", "This engine supports at most two parents per child, with null links only for single-parent tables.", table.name))
+        if len({r.child_key for r in incoming}) != len(incoming):
+            result.findings.append(Finding(Severity.ERROR, "duplicate_foreign_key", "Each relationship needs a different child key.", table.name))
 
     if _has_cycle(spec):
         result.findings.append(
@@ -462,6 +495,13 @@ def _validate_evaluation(spec: SyntheticDataSpec, result: ValidationResult) -> N
     known = {c.name for c in table.columns}
 
     if "predictive_utility" in evaluation.checks:
+        if evaluation.split != "random" and evaluation.split_column not in known:
+            result.findings.append(Finding(Severity.ERROR, "split_column_required", "Choose an existing column for the group or time split."))
+        target_col = table.column(evaluation.target or "")
+        if target_col and target_col.type in TEMPORAL_TYPES:
+            result.findings.append(Finding(Severity.ERROR, "unsupported_target", "Choose a numeric or categorical target, not a timestamp."))
+        if target_col and target_col.role == SemanticRole.DERIVED:
+            result.findings.append(Finding(Severity.ERROR, "derived_target", "A formula target measures its formula, not learned utility. Choose a learned target."))
         if not evaluation.target:
             result.findings.append(
                 Finding(Severity.ERROR, "utility_without_target",

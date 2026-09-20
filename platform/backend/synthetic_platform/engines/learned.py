@@ -148,6 +148,8 @@ class ArfEngine(EngineAdapter):
         for name in categoricals:
             frame_in[name] = frame_in[name].astype("category")
 
+        column_map = {name: f"feature_{i}" for i, name in enumerate(frame_in.columns)}
+        frame_in = frame_in.rename(columns=column_map)
         num_trees = 30
         ladder = list(self.leaf_size_ladder)
         retries: list[str] = []
@@ -206,7 +208,7 @@ class ArfEngine(EngineAdapter):
             ),
         }
 
-        frame = pd.DataFrame(raw).reset_index(drop=True)
+        frame = pd.DataFrame(raw).rename(columns={v: k for k, v in column_map.items()}).reset_index(drop=True)
         frame = apply_identifiers_and_constants(frame, table, spec.seed)
         frame, repair_info = normalize(frame, table, reference=prepared)
         frame = order_columns(frame, table)

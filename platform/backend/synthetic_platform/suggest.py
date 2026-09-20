@@ -106,7 +106,7 @@ def _temporal_rewrite(
         return None  # the engine cannot hold the extracted features either
 
     base = column.name
-    anchor_value = _anchor_for(base, frame)
+    anchor_value = _anchor_for(base, frame, tz_offset_hours)
     # A date carries no time of day: every value sits at midnight, so an extracted hour
     # would be a constant. A generator handed a zero-variance column does not merely
     # learn nothing from it — arfpy fails outright, fitting a truncated normal with a
@@ -126,7 +126,7 @@ def _temporal_rewrite(
             maximum=6,
             description=f"day of week extracted from '{base}' (0 = Monday)",
             source_expression=Expr.model_validate(
-                {"op": "day_of_week", "args": [{"col": base}]}
+                {"op": "day_of_week", "args": [{"col": base}], "tz_offset_hours": tz_offset_hours}
             ),
             provenance=_proposed(
                 f"extracted from '{base}' so the engine can model weekly pattern"
@@ -173,7 +173,7 @@ def _temporal_rewrite(
     # reconstruction would make the model's effort invisible.
     place_day = {"op": "add_days", "args": [{"col": anchor_name}, {"col": weekday_name}]}
     rebuild = Expr.model_validate(
-        {"op": "add_hours", "args": [place_day, {"col": hour_name}]}
+        {"op": "add_hours", "args": [place_day, {"op": "sub", "args": [{"col": hour_name}, {"const": tz_offset_hours}]}]}
         if with_hour
         else place_day
     )
@@ -196,7 +196,7 @@ def _temporal_rewrite(
     )
 
 
-def _anchor_for(column_name: str, frame) -> str:
+def _anchor_for(column_name: str, frame, tz_offset_hours: float = 0) -> str:
     """The Monday of the first week present in the source, as an ISO string.
 
     Anchoring to the data's own start keeps rebuilt timestamps in a plausible period
@@ -209,7 +209,7 @@ def _anchor_for(column_name: str, frame) -> str:
     import pandas as pd
 
     stamps = pd.to_datetime(frame[column_name], format="mixed", utc=True, errors="coerce")
-    earliest = stamps.min()
+    earliest = (stamps + pd.Timedelta(hours=tz_offset_hours)).min()
     if pd.isna(earliest):
         return fallback
     monday = (earliest - pd.Timedelta(days=int(earliest.dayofweek))).normalize()

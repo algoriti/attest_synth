@@ -133,9 +133,9 @@ def evaluate(expr: Expr, frame: pd.DataFrame) -> pd.Series | object:
         shifted = moment + pd.Timedelta(hours=expr.tz_offset_hours)
         return shifted.dt.hour + shifted.dt.minute / 60.0 + shifted.dt.second / 3600.0
     if op == "date_of":
-        return _as_datetime(args[0]).dt.date
+        return (_as_datetime(args[0]) + pd.Timedelta(hours=expr.tz_offset_hours)).dt.date
     if op == "day_of_week":
-        return _as_datetime(args[0]).dt.dayofweek
+        return (_as_datetime(args[0]) + pd.Timedelta(hours=expr.tz_offset_hours)).dt.dayofweek
     if op == "add_days":
         return _as_datetime(args[0]) + pd.to_timedelta(_numeric(args[1]), unit="D")
     if op == "add_hours":
@@ -162,7 +162,7 @@ def derivation_order(table: Table) -> list[Column]:
         for column in list(remaining):
             assert column.formula is not None
             needs = column.formula.referenced_columns()
-            if needs <= resolved | {column.name}:
+            if needs <= resolved:
                 ordered.append(column)
                 resolved.add(column.name)
                 remaining.remove(column)
@@ -246,13 +246,19 @@ def _cast_to_declared_type(values: pd.Series, column: Column) -> pd.Series:
         if missing.any() and not column.nullable:
             raise _missing_value_error(column, int(missing.sum()), len(numeric))
 
-        if column.minimum is not None or column.maximum is not None:
-            numeric = numeric.clip(lower=column.minimum, upper=column.maximum)
+        if ((column.minimum is not None and (numeric < column.minimum).any()) or
+                (column.maximum is not None and (numeric > column.maximum).any())):
+            raise DerivationError(
+                f"Formula for '{column.name}' exceeds its declared bounds. "
+                "Correct the formula or explicitly use clip; no silent repair was applied."
+            )
 
         if column.type == ColumnType.NUMBER:
             return numeric.astype("Float64") if missing.any() else numeric.astype(float)
 
         rounded = np.round(numeric)
+        if ((numeric - rounded).abs() > 1e-9).any():
+            raise DerivationError(f"Formula for '{column.name}' is not integral; use round explicitly.")
         # int64 cannot hold a missing value, so a nullable column uses pandas' Int64.
         return rounded.astype("Int64") if missing.any() else rounded.astype("int64")
 

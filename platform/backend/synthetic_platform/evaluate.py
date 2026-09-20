@@ -243,6 +243,13 @@ def predictive_utility(
     if target not in synthetic.columns or target not in reference.columns:
         return {"error": f"target '{target}' missing from one of the frames"}
 
+    # Which label counts as "positive" decides what average precision even means, so
+    # it is chosen once from the real data rather than assumed to be 1. The rarer class
+    # is the usual subject of an imbalanced binary task.
+    labels = reference[target].dropna()
+    counts = labels.value_counts()
+    positive_class = counts.index[-1] if len(counts) == 2 else None
+
     real_train, real_test = train_test_split(
         reference.dropna(subset=[target]),
         test_size=0.25,
@@ -282,10 +289,27 @@ def predictive_utility(
             proba = pipe.predict_proba(real_test[features])
             if proba.shape[1] < 2:
                 return {"error": "training data contained a single class"}
-            pred = proba[:, 1]
+            classes = list(pipe.classes_)
+            if len(classes) != 2:
+                return {
+                    "error": (
+                        f"target '{target}' has {len(classes)} classes; average precision "
+                        "is defined here for binary targets only"
+                    )
+                }
+            # The positive class is not always the literal 1. A target of 'yes'/'no'
+            # scored against a hardcoded pos_label=1 raises rather than mis-scoring,
+            # which is how this surfaced, but either would be wrong.
+            positive = positive_class if positive_class in classes else classes[-1]
+            pred = proba[:, classes.index(positive)]
             return {
-                "average_precision": float(average_precision_score(real_test[target], pred)),
-                "roc_auc": float(roc_auc_score(real_test[target], pred)),
+                "average_precision": float(
+                    average_precision_score(real_test[target], pred, pos_label=positive)
+                ),
+                "roc_auc": float(
+                    roc_auc_score((real_test[target] == positive).astype(int), pred)
+                ),
+                "positive_class": str(positive),
             }
         pred = pipe.predict(real_test[features])
         return {

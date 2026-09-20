@@ -1073,3 +1073,46 @@ def test_leaf_size_ladder_only_coarsens():
 
     ladder = list(ArfEngine.leaf_size_ladder)
     assert ladder == sorted(ladder) and len(set(ladder)) == len(ladder)
+
+
+def test_positive_class_is_inferred_not_assumed():
+    """A yes/no target must not be scored against a hardcoded pos_label of 1.
+
+    Regression: average_precision_score raised "pos_label=1 is not a valid label"
+    on the UCI bank target. Raising was the lucky outcome; a 0/1-coded target with
+    the opposite convention would have been silently mis-scored instead.
+    """
+    from synthetic_platform.evaluate import predictive_utility
+
+    rng = np.random.default_rng(13)
+    n = 400
+    score = rng.normal(0, 1, n)
+    reference = pd.DataFrame(
+        {
+            "score": score,
+            "band": rng.choice(["low", "high"], n),
+            "subscribed": np.where(score + rng.normal(0, 0.4, n) > 1.2, "yes", "no"),
+        }
+    )
+    table, _ = profile_csv(reference, "clients")
+    result = predictive_utility(
+        reference.copy(), reference, table, "subscribed", "classification", seed=5
+    )
+    assert "error" not in result
+    # "yes" is the minority label and therefore the subject of the task.
+    assert result["trained_on_real"]["positive_class"] == "yes"
+    assert 0.0 <= result["trained_on_real"]["average_precision"] <= 1.0
+
+
+def test_multiclass_target_is_refused_rather_than_mis_scored():
+    from synthetic_platform.evaluate import predictive_utility
+
+    rng = np.random.default_rng(19)
+    reference = pd.DataFrame(
+        {"score": rng.normal(size=300), "grade": rng.choice(["a", "b", "c"], 300)}
+    )
+    table, _ = profile_csv(reference, "t")
+    result = predictive_utility(
+        reference.copy(), reference, table, "grade", "classification", seed=5
+    )
+    assert "3 classes" in result["trained_on_real"]["error"]

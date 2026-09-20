@@ -303,6 +303,9 @@ class Evaluation(BaseModel):
     ] = Field(default_factory=lambda: ["schema", "constraints"])
     target: str | None = None
     task: Literal["classification", "regression"] | None = None
+    split: Literal["random", "group", "time"] = "random"
+    split_column: str | None = None
+    test_fraction: float = Field(default=0.25, gt=0, lt=0.5)
 
 
 class Relationship(BaseModel):
@@ -314,6 +317,7 @@ class Relationship(BaseModel):
     child_key: str
     cardinality: Literal["one_to_many", "one_to_one"] = "one_to_many"
     optional: bool = False
+    null_fraction: float = Field(default=0.0, ge=0, lt=1)
     child_count_min: int | None = None
     child_count_max: int | None = None
     provenance: Provenance = Field(
@@ -325,6 +329,7 @@ class Table(BaseModel):
     name: str
     rows: int | None = None  # None means "derive from the relationship"
     primary_key: str | None = None
+    unique_keys: list[list[str]] = Field(default_factory=list)
     columns: list[Column] = Field(default_factory=list)
     constraints: list[Constraint] = Field(default_factory=list)
     source: Source = Field(default_factory=Source)
