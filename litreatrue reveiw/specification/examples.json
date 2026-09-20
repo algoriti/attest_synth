@@ -1,0 +1,35 @@
+[
+  {
+    "spec_version": "0.1", "name": "retail_order_scenario", "mode": "schema_rules", "purpose": "software_testing",
+    "source": {"kind": "none"}, "rows": 1000,
+    "columns": [
+      {"name": "order_id", "type": "string", "nullable": false, "role": "identifier", "origin": {"kind": "user", "description": "Unique artificial order identifier"}},
+      {"name": "quantity", "type": "integer", "nullable": false, "minimum": 1, "maximum": 10, "origin": {"kind": "unverified_assumption", "description": "Scenario range, not a measured customer distribution"}},
+      {"name": "unit_price_cents", "type": "integer", "nullable": false, "minimum": 100, "maximum": 20000, "origin": {"kind": "unverified_assumption", "description": "Scenario price bounds"}},
+      {"name": "total_cents", "type": "integer", "nullable": false, "origin": {"kind": "user", "description": "Quantity multiplied by unit price"}}
+    ],
+    "constraints": [{"operator": "unique", "columns": ["order_id"]}, {"operator": "product_equals", "columns": ["quantity", "unit_price_cents", "total_cents"]}],
+    "privacy": {"requirement": "no_formal_guarantee"}, "evaluation": {"checks": ["schema", "constraints"]}
+  },
+  {
+    "spec_version": "0.1", "name": "education_credit_scenario", "mode": "schema_rules", "purpose": "teaching",
+    "source": {"kind": "none"}, "rows": 1000,
+    "columns": [
+      {"name": "credits_attempted", "type": "integer", "nullable": false, "minimum": 1, "maximum": 30, "origin": {"kind": "unverified_assumption", "description": "Invented teaching scenario"}},
+      {"name": "credits_passed", "type": "integer", "nullable": false, "minimum": 0, "maximum": 30, "origin": {"kind": "user", "description": "Must not exceed attempted credits"}}
+    ],
+    "constraints": [{"operator": "less_or_equal", "columns": ["credits_passed", "credits_attempted"]}],
+    "privacy": {"requirement": "no_formal_guarantee"}, "evaluation": {"checks": ["schema", "constraints"]}
+  },
+  {
+    "spec_version": "0.1", "name": "banking_example_subset", "mode": "learned_table", "purpose": "ml_development",
+    "source": {"kind": "public_records", "reference": "https://archive.ics.uci.edu/dataset/222/bank+marketing"}, "rows": 1000,
+    "columns": [
+      {"name": "age", "type": "integer", "nullable": false, "role": "feature", "origin": {"kind": "public_source", "description": "UCI field definition"}},
+      {"name": "job", "type": "categorical", "nullable": false, "role": "feature", "origin": {"kind": "learned_estimate", "description": "Allowed categories to be fitted on training partition"}},
+      {"name": "y", "type": "categorical", "nullable": false, "role": "target", "categories": [0, 1], "origin": {"kind": "public_source", "description": "Deposit subscription mapped to binary label"}}
+    ],
+    "constraints": [], "privacy": {"requirement": "no_formal_guarantee"},
+    "evaluation": {"checks": ["schema", "fidelity", "predictive_utility"], "target": "y"}
+  }
+]

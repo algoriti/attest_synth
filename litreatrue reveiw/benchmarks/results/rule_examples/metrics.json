@@ -1,0 +1,36 @@
+{
+  "seed": 2026,
+  "evidence_status": "Executed scenario examples; not learned from real domain data; no domain-realism claim",
+  "results": [
+    {
+      "case": "retail",
+      "rows": 1000,
+      "seconds": 0.13577042599990818,
+      "checks": {
+        "unique_order_id": true,
+        "correct_total": true,
+        "shipment_not_before_order": true
+      }
+    },
+    {
+      "case": "education",
+      "rows": 1000,
+      "seconds": 0.007588219999888679,
+      "checks": {
+        "unique_student_id": true,
+        "passed_within_attempted": true,
+        "fraction_within_0_1": true
+      }
+    },
+    {
+      "case": "sensor_scenario",
+      "rows": 1000,
+      "seconds": 0.018148998000469874,
+      "checks": {
+        "increasing_time": true,
+        "temperature_within_bounds": true
+      },
+      "observed_lag1_correlation": 0.901303625094899
+    }
+  ]
+}

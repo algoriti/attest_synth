@@ -1,0 +1,15 @@
+================ Constructing Bayesian Network (BN) ================
+Adding ROOT balance
+Adding attribute job
+Adding attribute education
+Adding attribute age
+Adding attribute marital
+Adding attribute housing
+Adding attribute contact
+Adding attribute poutcome
+Adding attribute previous
+Adding attribute y
+Adding attribute campaign
+Adding attribute loan
+Adding attribute default
+========================== BN constructed ==========================

@@ -1,0 +1,85 @@
+{
+  "bank": {
+    "original_rows": 4521,
+    "unique_projected_rows": 4518,
+    "benchmark_rows": 4518,
+    "columns": [
+      "age",
+      "job",
+      "marital",
+      "education",
+      "default",
+      "balance",
+      "housing",
+      "loan",
+      "contact",
+      "campaign",
+      "previous",
+      "poutcome",
+      "y"
+    ],
+    "categorical": [
+      "job",
+      "marital",
+      "education",
+      "default",
+      "housing",
+      "loan",
+      "contact",
+      "poutcome",
+      "y"
+    ],
+    "target": "y",
+    "task": "classification"
+  },
+  "student": {
+    "original_rows": 395,
+    "unique_projected_rows": 392,
+    "benchmark_rows": 392,
+    "columns": [
+      "school",
+      "sex",
+      "age",
+      "studytime",
+      "failures",
+      "schoolsup",
+      "higher",
+      "internet",
+      "absences",
+      "G1",
+      "G2",
+      "G3"
+    ],
+    "categorical": [
+      "school",
+      "sex",
+      "schoolsup",
+      "higher",
+      "internet"
+    ],
+    "target": "G3",
+    "task": "regression"
+  },
+  "wine": {
+    "original_rows": 1599,
+    "unique_projected_rows": 1359,
+    "benchmark_rows": 1359,
+    "columns": [
+      "fixed acidity",
+      "volatile acidity",
+      "citric acid",
+      "residual sugar",
+      "chlorides",
+      "free sulfur dioxide",
+      "total sulfur dioxide",
+      "density",
+      "pH",
+      "sulphates",
+      "alcohol",
+      "quality"
+    ],
+    "categorical": [],
+    "target": "quality",
+    "task": "regression"
+  }
+}

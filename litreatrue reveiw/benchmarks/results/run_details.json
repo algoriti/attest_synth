@@ -1,0 +1,570 @@
+[
+  {
+    "dataset": "bank",
+    "seed": 11,
+    "engine": "real_train_reference",
+    "settings": {},
+    "warnings": []
+  },
+  {
+    "dataset": "bank",
+    "seed": 11,
+    "engine": "independent",
+    "settings": {},
+    "warnings": []
+  },
+  {
+    "dataset": "bank",
+    "seed": 11,
+    "engine": "bootstrap_control",
+    "settings": {
+      "warning": "Copies complete real training rows; diagnostic control only."
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "bank",
+    "seed": 11,
+    "engine": "copulas_rank_adapter",
+    "settings": {
+      "adapter": "Randomized frequency intervals for nominal categories; empirical numeric inverse CDF. Category order is arbitrary."
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "bank",
+    "seed": 11,
+    "engine": "datasynthesizer_bn",
+    "settings": {
+      "epsilon": 0,
+      "meaning": "Library sentinel disabling privacy, NOT mathematical epsilon=0 DP",
+      "k": 1,
+      "histogram_bins": 10
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "bank",
+    "seed": 11,
+    "engine": "arfpy",
+    "settings": {
+      "num_trees": 30,
+      "max_iters": 3,
+      "min_node_size": 5,
+      "discriminator_oob_accuracy": [
+        0.7424734356552538,
+        0.4182408500590319
+      ]
+    },
+    "warnings": [
+      "Series.__getitem__ treating keys as positions is deprecated. In a future version, integer keys will always be treated as labels (consistent with DataFrame behavior). To access a value by position, use `ser.iloc[pos]`",
+      "`in1d` is deprecated. Use `np.isin` instead."
+    ]
+  },
+  {
+    "dataset": "bank",
+    "seed": 29,
+    "engine": "real_train_reference",
+    "settings": {},
+    "warnings": []
+  },
+  {
+    "dataset": "bank",
+    "seed": 29,
+    "engine": "independent",
+    "settings": {},
+    "warnings": []
+  },
+  {
+    "dataset": "bank",
+    "seed": 29,
+    "engine": "bootstrap_control",
+    "settings": {
+      "warning": "Copies complete real training rows; diagnostic control only."
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "bank",
+    "seed": 29,
+    "engine": "copulas_rank_adapter",
+    "settings": {
+      "adapter": "Randomized frequency intervals for nominal categories; empirical numeric inverse CDF. Category order is arbitrary."
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "bank",
+    "seed": 29,
+    "engine": "datasynthesizer_bn",
+    "settings": {
+      "epsilon": 0,
+      "meaning": "Library sentinel disabling privacy, NOT mathematical epsilon=0 DP",
+      "k": 1,
+      "histogram_bins": 10
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "bank",
+    "seed": 29,
+    "engine": "arfpy",
+    "settings": {
+      "num_trees": 30,
+      "max_iters": 3,
+      "min_node_size": 5,
+      "discriminator_oob_accuracy": [
+        0.733913813459268,
+        0.41514167650531286
+      ]
+    },
+    "warnings": [
+      "Series.__getitem__ treating keys as positions is deprecated. In a future version, integer keys will always be treated as labels (consistent with DataFrame behavior). To access a value by position, use `ser.iloc[pos]`",
+      "`in1d` is deprecated. Use `np.isin` instead."
+    ]
+  },
+  {
+    "dataset": "bank",
+    "seed": 47,
+    "engine": "real_train_reference",
+    "settings": {},
+    "warnings": []
+  },
+  {
+    "dataset": "bank",
+    "seed": 47,
+    "engine": "independent",
+    "settings": {},
+    "warnings": []
+  },
+  {
+    "dataset": "bank",
+    "seed": 47,
+    "engine": "bootstrap_control",
+    "settings": {
+      "warning": "Copies complete real training rows; diagnostic control only."
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "bank",
+    "seed": 47,
+    "engine": "copulas_rank_adapter",
+    "settings": {
+      "adapter": "Randomized frequency intervals for nominal categories; empirical numeric inverse CDF. Category order is arbitrary."
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "bank",
+    "seed": 47,
+    "engine": "datasynthesizer_bn",
+    "settings": {
+      "epsilon": 0,
+      "meaning": "Library sentinel disabling privacy, NOT mathematical epsilon=0 DP",
+      "k": 1,
+      "histogram_bins": 10
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "bank",
+    "seed": 47,
+    "engine": "arfpy",
+    "settings": {
+      "num_trees": 30,
+      "max_iters": 3,
+      "min_node_size": 5,
+      "discriminator_oob_accuracy": [
+        0.75,
+        0.41912632821723733
+      ]
+    },
+    "warnings": [
+      "Series.__getitem__ treating keys as positions is deprecated. In a future version, integer keys will always be treated as labels (consistent with DataFrame behavior). To access a value by position, use `ser.iloc[pos]`",
+      "`in1d` is deprecated. Use `np.isin` instead."
+    ]
+  },
+  {
+    "dataset": "student",
+    "seed": 11,
+    "engine": "real_train_reference",
+    "settings": {},
+    "warnings": []
+  },
+  {
+    "dataset": "student",
+    "seed": 11,
+    "engine": "independent",
+    "settings": {},
+    "warnings": []
+  },
+  {
+    "dataset": "student",
+    "seed": 11,
+    "engine": "bootstrap_control",
+    "settings": {
+      "warning": "Copies complete real training rows; diagnostic control only."
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "student",
+    "seed": 11,
+    "engine": "copulas_rank_adapter",
+    "settings": {
+      "adapter": "Randomized frequency intervals for nominal categories; empirical numeric inverse CDF. Category order is arbitrary."
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "student",
+    "seed": 11,
+    "engine": "datasynthesizer_bn",
+    "settings": {
+      "epsilon": 0,
+      "meaning": "Library sentinel disabling privacy, NOT mathematical epsilon=0 DP",
+      "k": 1,
+      "histogram_bins": 10
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "student",
+    "seed": 11,
+    "engine": "arfpy",
+    "settings": {
+      "num_trees": 30,
+      "max_iters": 3,
+      "min_node_size": 5,
+      "discriminator_oob_accuracy": [
+        0.782312925170068,
+        0.42346938775510207
+      ]
+    },
+    "warnings": [
+      "Series.__getitem__ treating keys as positions is deprecated. In a future version, integer keys will always be treated as labels (consistent with DataFrame behavior). To access a value by position, use `ser.iloc[pos]`",
+      "`in1d` is deprecated. Use `np.isin` instead.",
+      "ks_2samp: Exact calculation unsuccessful. Switching to method=asymp."
+    ]
+  },
+  {
+    "dataset": "student",
+    "seed": 29,
+    "engine": "real_train_reference",
+    "settings": {},
+    "warnings": []
+  },
+  {
+    "dataset": "student",
+    "seed": 29,
+    "engine": "independent",
+    "settings": {},
+    "warnings": [
+      "ks_2samp: Exact calculation unsuccessful. Switching to method=asymp."
+    ]
+  },
+  {
+    "dataset": "student",
+    "seed": 29,
+    "engine": "bootstrap_control",
+    "settings": {
+      "warning": "Copies complete real training rows; diagnostic control only."
+    },
+    "warnings": [
+      "ks_2samp: Exact calculation unsuccessful. Switching to method=asymp."
+    ]
+  },
+  {
+    "dataset": "student",
+    "seed": 29,
+    "engine": "copulas_rank_adapter",
+    "settings": {
+      "adapter": "Randomized frequency intervals for nominal categories; empirical numeric inverse CDF. Category order is arbitrary."
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "student",
+    "seed": 29,
+    "engine": "datasynthesizer_bn",
+    "settings": {
+      "epsilon": 0,
+      "meaning": "Library sentinel disabling privacy, NOT mathematical epsilon=0 DP",
+      "k": 1,
+      "histogram_bins": 10
+    },
+    "warnings": [
+      "ks_2samp: Exact calculation unsuccessful. Switching to method=asymp."
+    ]
+  },
+  {
+    "dataset": "student",
+    "seed": 29,
+    "engine": "arfpy",
+    "settings": {
+      "num_trees": 30,
+      "max_iters": 3,
+      "min_node_size": 5,
+      "discriminator_oob_accuracy": [
+        0.7517006802721088,
+        0.4302721088435374
+      ]
+    },
+    "warnings": [
+      "Series.__getitem__ treating keys as positions is deprecated. In a future version, integer keys will always be treated as labels (consistent with DataFrame behavior). To access a value by position, use `ser.iloc[pos]`",
+      "`in1d` is deprecated. Use `np.isin` instead."
+    ]
+  },
+  {
+    "dataset": "student",
+    "seed": 47,
+    "engine": "real_train_reference",
+    "settings": {},
+    "warnings": []
+  },
+  {
+    "dataset": "student",
+    "seed": 47,
+    "engine": "independent",
+    "settings": {},
+    "warnings": [
+      "ks_2samp: Exact calculation unsuccessful. Switching to method=asymp."
+    ]
+  },
+  {
+    "dataset": "student",
+    "seed": 47,
+    "engine": "bootstrap_control",
+    "settings": {
+      "warning": "Copies complete real training rows; diagnostic control only."
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "student",
+    "seed": 47,
+    "engine": "copulas_rank_adapter",
+    "settings": {
+      "adapter": "Randomized frequency intervals for nominal categories; empirical numeric inverse CDF. Category order is arbitrary."
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "student",
+    "seed": 47,
+    "engine": "datasynthesizer_bn",
+    "settings": {
+      "epsilon": 0,
+      "meaning": "Library sentinel disabling privacy, NOT mathematical epsilon=0 DP",
+      "k": 1,
+      "histogram_bins": 10
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "student",
+    "seed": 47,
+    "engine": "arfpy",
+    "settings": {
+      "num_trees": 30,
+      "max_iters": 3,
+      "min_node_size": 5,
+      "discriminator_oob_accuracy": [
+        0.7874149659863946,
+        0.4200680272108844
+      ]
+    },
+    "warnings": [
+      "Series.__getitem__ treating keys as positions is deprecated. In a future version, integer keys will always be treated as labels (consistent with DataFrame behavior). To access a value by position, use `ser.iloc[pos]`",
+      "`in1d` is deprecated. Use `np.isin` instead.",
+      "ks_2samp: Exact calculation unsuccessful. Switching to method=asymp."
+    ]
+  },
+  {
+    "dataset": "wine",
+    "seed": 11,
+    "engine": "real_train_reference",
+    "settings": {},
+    "warnings": []
+  },
+  {
+    "dataset": "wine",
+    "seed": 11,
+    "engine": "independent",
+    "settings": {},
+    "warnings": []
+  },
+  {
+    "dataset": "wine",
+    "seed": 11,
+    "engine": "bootstrap_control",
+    "settings": {
+      "warning": "Copies complete real training rows; diagnostic control only."
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "wine",
+    "seed": 11,
+    "engine": "copulas_rank_adapter",
+    "settings": {
+      "adapter": "Randomized frequency intervals for nominal categories; empirical numeric inverse CDF. Category order is arbitrary."
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "wine",
+    "seed": 11,
+    "engine": "datasynthesizer_bn",
+    "settings": {
+      "epsilon": 0,
+      "meaning": "Library sentinel disabling privacy, NOT mathematical epsilon=0 DP",
+      "k": 1,
+      "histogram_bins": 10
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "wine",
+    "seed": 11,
+    "engine": "arfpy",
+    "settings": {
+      "num_trees": 30,
+      "max_iters": 3,
+      "min_node_size": 5,
+      "discriminator_oob_accuracy": [
+        0.830225711481845,
+        0.478900883218842
+      ]
+    },
+    "warnings": [
+      "Series.__getitem__ treating keys as positions is deprecated. In a future version, integer keys will always be treated as labels (consistent with DataFrame behavior). To access a value by position, use `ser.iloc[pos]`",
+      "`in1d` is deprecated. Use `np.isin` instead."
+    ]
+  },
+  {
+    "dataset": "wine",
+    "seed": 29,
+    "engine": "real_train_reference",
+    "settings": {},
+    "warnings": []
+  },
+  {
+    "dataset": "wine",
+    "seed": 29,
+    "engine": "independent",
+    "settings": {},
+    "warnings": []
+  },
+  {
+    "dataset": "wine",
+    "seed": 29,
+    "engine": "bootstrap_control",
+    "settings": {
+      "warning": "Copies complete real training rows; diagnostic control only."
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "wine",
+    "seed": 29,
+    "engine": "copulas_rank_adapter",
+    "settings": {
+      "adapter": "Randomized frequency intervals for nominal categories; empirical numeric inverse CDF. Category order is arbitrary."
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "wine",
+    "seed": 29,
+    "engine": "datasynthesizer_bn",
+    "settings": {
+      "epsilon": 0,
+      "meaning": "Library sentinel disabling privacy, NOT mathematical epsilon=0 DP",
+      "k": 1,
+      "histogram_bins": 10
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "wine",
+    "seed": 29,
+    "engine": "arfpy",
+    "settings": {
+      "num_trees": 30,
+      "max_iters": 3,
+      "min_node_size": 5,
+      "discriminator_oob_accuracy": [
+        0.8248282630029441,
+        0.4676153091265947
+      ]
+    },
+    "warnings": [
+      "Series.__getitem__ treating keys as positions is deprecated. In a future version, integer keys will always be treated as labels (consistent with DataFrame behavior). To access a value by position, use `ser.iloc[pos]`",
+      "`in1d` is deprecated. Use `np.isin` instead."
+    ]
+  },
+  {
+    "dataset": "wine",
+    "seed": 47,
+    "engine": "real_train_reference",
+    "settings": {},
+    "warnings": []
+  },
+  {
+    "dataset": "wine",
+    "seed": 47,
+    "engine": "independent",
+    "settings": {},
+    "warnings": []
+  },
+  {
+    "dataset": "wine",
+    "seed": 47,
+    "engine": "bootstrap_control",
+    "settings": {
+      "warning": "Copies complete real training rows; diagnostic control only."
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "wine",
+    "seed": 47,
+    "engine": "copulas_rank_adapter",
+    "settings": {
+      "adapter": "Randomized frequency intervals for nominal categories; empirical numeric inverse CDF. Category order is arbitrary."
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "wine",
+    "seed": 47,
+    "engine": "datasynthesizer_bn",
+    "settings": {
+      "epsilon": 0,
+      "meaning": "Library sentinel disabling privacy, NOT mathematical epsilon=0 DP",
+      "k": 1,
+      "histogram_bins": 10
+    },
+    "warnings": []
+  },
+  {
+    "dataset": "wine",
+    "seed": 47,
+    "engine": "arfpy",
+    "settings": {
+      "num_trees": 30,
+      "max_iters": 3,
+      "min_node_size": 5,
+      "discriminator_oob_accuracy": [
+        0.8287536800785084,
+        0.4803729146221786
+      ]
+    },
+    "warnings": [
+      "Series.__getitem__ treating keys as positions is deprecated. In a future version, integer keys will always be treated as labels (consistent with DataFrame behavior). To access a value by position, use `ser.iloc[pos]`",
+      "`in1d` is deprecated. Use `np.isin` instead."
+    ]
+  }
+]

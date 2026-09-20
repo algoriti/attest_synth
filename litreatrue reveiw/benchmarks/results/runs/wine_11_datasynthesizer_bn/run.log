@@ -1,0 +1,14 @@
+================ Constructing Bayesian Network (BN) ================
+Adding ROOT density
+Adding attribute fixed acidity
+Adding attribute pH
+Adding attribute citric acid
+Adding attribute volatile acidity
+Adding attribute alcohol
+Adding attribute quality
+Adding attribute chlorides
+Adding attribute residual sugar
+Adding attribute sulphates
+Adding attribute total sulfur dioxide
+Adding attribute free sulfur dioxide
+========================== BN constructed ==========================

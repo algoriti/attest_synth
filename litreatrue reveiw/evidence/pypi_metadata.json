@@ -1,0 +1,418 @@
+[
+  {
+    "package": "synthcity",
+    "version": "0.2.12",
+    "requires_python": ">=3.9",
+    "requires_dist": [
+      "importlib-metadata",
+      "pandas>=2.1",
+      "torch<2.3,>=2.1",
+      "scikit-learn>=1.2",
+      "nflows>=0.14",
+      "numpy<2.0,>=1.20",
+      "lifelines<0.30.0,>=0.29.0",
+      "opacus>=1.3",
+      "networkx<3.0,>2.0",
+      "decaf-synthetic-data>=0.1.6",
+      "optuna>=3.1",
+      "shap",
+      "tenacity",
+      "tqdm",
+      "loguru",
+      "pydantic>=2.0",
+      "cloudpickle",
+      "scipy",
+      "xgboost<3.0.0",
+      "geomloss",
+      "pgmpy<1.0",
+      "redis",
+      "pycox",
+      "xgbse>=0.3.1",
+      "pykeops",
+      "fflows",
+      "monai",
+      "arfpy",
+      "fastcore<1.8",
+      "fastai<2.8",
+      "tsai; python_version > \"3.7\"",
+      "be-great>=0.0.5; python_version >= \"3.9\"",
+      "setuptools; extra == \"all\"",
+      "pytest; extra == \"all\"",
+      "pytest-cov; extra == \"all\"",
+      "jupyter; extra == \"all\"",
+      "notebook; extra == \"all\"",
+      "bandit; extra == \"all\"",
+      "black; extra == \"all\"",
+      "black-nb; extra == \"all\"",
+      "darglint; extra == \"all\"",
+      "docutils<0.18; extra == \"all\"",
+      "doc8; extra == \"all\"",
+      "flake8; extra == \"all\"",
+      "isort; extra == \"all\"",
+      "nbconvert; extra == \"all\"",
+      "nbformat; extra == \"all\"",
+      "pytest-benchmark; extra == \"all\"",
+      "pytest-xdist[psutil]; extra == \"all\"",
+      "pytest-xprocess; extra == \"all\"",
+      "igraph; extra == \"all\"",
+      "py; extra == \"all\"",
+      "pre-commit; extra == \"all\"",
+      "tabulate; extra == \"all\"",
+      "click; extra == \"all\"",
+      "dgl; extra == \"all\"",
+      "torch-geometric; extra == \"all\"",
+      "torch-sparse; extra == \"all\"",
+      "torch-scatter; extra == \"all\"",
+      "dgl; extra == \"goggle\"",
+      "torch-geometric; extra == \"goggle\"",
+      "torch-sparse; extra == \"goggle\"",
+      "torch-scatter; extra == \"goggle\"",
+      "setuptools; extra == \"testing\"",
+      "pytest; extra == \"testing\"",
+      "pytest-cov; extra == \"testing\"",
+      "jupyter; extra == \"testing\"",
+      "notebook; extra == \"testing\"",
+      "bandit; extra == \"testing\"",
+      "black; extra == \"testing\"",
+      "black-nb; extra == \"testing\"",
+      "darglint; extra == \"testing\"",
+      "docutils<0.18; extra == \"testing\"",
+      "doc8; extra == \"testing\"",
+      "flake8; extra == \"testing\"",
+      "isort; extra == \"testing\"",
+      "nbconvert; extra == \"testing\"",
+      "nbformat; extra == \"testing\"",
+      "pytest-benchmark; extra == \"testing\"",
+      "pytest-xdist[psutil]; extra == \"testing\"",
+      "pytest-xprocess; extra == \"testing\"",
+      "igraph; extra == \"testing\"",
+      "py; extra == \"testing\"",
+      "pre-commit; extra == \"testing\"",
+      "tabulate; extra == \"testing\"",
+      "click; extra == \"testing\""
+    ],
+    "release_files": [
+      {
+        "filename": "synthcity-0.2.12-py3-none-any.whl",
+        "upload_time_iso_8601": "2025-05-08T08:51:31.120571Z",
+        "digests": {
+          "blake2b_256": "aa290266c383bd38d1caffa857dba43ebe23332edc66cf766f45a7b5cc9ffac5",
+          "md5": "b1f05dee11887cd05b6ee93591d60b1c",
+          "sha256": "7421a1f98d76f302967f32274b552323e9d63db0419fb652ac978fe96e860b3b"
+        }
+      },
+      {
+        "filename": "synthcity-0.2.12-py3-none-macosx_10_14_x86_64.whl",
+        "upload_time_iso_8601": "2025-05-08T08:51:07.008698Z",
+        "digests": {
+          "blake2b_256": "fd36d3a2cc965b4d184a3deb958471676b0f60ec3a3933f0554179001d041ed6",
+          "md5": "6bafbc71032c08c3cd455960548100ab",
+          "sha256": "a8b12118a957df1d15072d58f829f800e37f54d466d8250f8238c9e8eedf1ab9"
+        }
+      }
+    ]
+  },
+  {
+    "package": "smartnoise-synth",
+    "version": "1.0.8",
+    "requires_python": "<3.15,>=3.10",
+    "requires_dist": [
+      "Faker>=17.0.0",
+      "disjoint-set<0.10.0,>=0.9.0",
+      "mbi<2,>=1.1.0",
+      "opacus<0.15.0,>=0.14.0",
+      "pac-synth<0.0.9,>=0.0.8",
+      "smartnoise-sql>=1.0.10"
+    ],
+    "release_files": [
+      {
+        "filename": "smartnoise_synth-1.0.8-py3-none-any.whl",
+        "upload_time_iso_8601": "2026-04-15T00:08:37.894394Z",
+        "digests": {
+          "blake2b_256": "d0fb4c49d12d96eb1fede9547cd5d10a8be547ab59d4a2594372ea6df376e20a",
+          "md5": "097e71fb873d47d1d40b46013ea6631b",
+          "sha256": "daf05e0750d8d803e3f2fb716e848b5994ac0923bcc1e04cbf9e99baa9e85375"
+        }
+      },
+      {
+        "filename": "smartnoise_synth-1.0.8.tar.gz",
+        "upload_time_iso_8601": "2026-04-15T00:08:39.043589Z",
+        "digests": {
+          "blake2b_256": "37a65897530cca31aa863847976f8e8a59f100d2c6a315d408619c22d43ef38c",
+          "md5": "1771d5495d20ef97ba18d68922638206",
+          "sha256": "710569ddafc9b3ba16dfea9b95306a8744d3548de598f5ddfbafc632fb29cb8f"
+        }
+      }
+    ]
+  },
+  {
+    "package": "DataSynthesizer",
+    "version": "0.1.13",
+    "requires_python": ">=3.7",
+    "requires_dist": [
+      "numpy >=1.18.5",
+      "pandas >=1.0.5",
+      "scikit-learn >=0.23.1",
+      "matplotlib >=3.2.2",
+      "seaborn >=0.10.1",
+      "python-dateutil >=2.8.1"
+    ],
+    "release_files": [
+      {
+        "filename": "DataSynthesizer-0.1.13-py2.py3-none-any.whl",
+        "upload_time_iso_8601": "2023-10-18T20:58:29.978293Z",
+        "digests": {
+          "blake2b_256": "e9f512b5bdff0f3e2cf4ab6f991e5307c643abe6a4d72b8a78f754b59a074c6d",
+          "md5": "4a120db9f28c75d821928055f909a8ee",
+          "sha256": "3d90b3b97c61ed08c9025a6c9bd76504394ab94a2728f8fef7bba024c2debfd4"
+        }
+      },
+      {
+        "filename": "DataSynthesizer-0.1.13.tar.gz",
+        "upload_time_iso_8601": "2023-10-18T20:58:32.293586Z",
+        "digests": {
+          "blake2b_256": "5eb4051fea17ca58bdef3538772fc59115b8bc868eecf81582f6b1b9162854d8",
+          "md5": "bff72714541f03c1a34e81f7caf95feb",
+          "sha256": "5be5b25969bcf5bc39bc9e8bff63593bc295f4f84b5955f3a1a66679d7c0072a"
+        }
+      }
+    ]
+  },
+  {
+    "package": "arfpy",
+    "version": "0.1.1",
+    "requires_python": "",
+    "requires_dist": null,
+    "release_files": [
+      {
+        "filename": "arfpy-0.1.1.tar.gz",
+        "upload_time_iso_8601": "2023-09-22T06:56:19.600314Z",
+        "digests": {
+          "blake2b_256": "956fa61794959d3860e23f5f2de5886b61154d40c246b38eedebf19d22e4cc35",
+          "md5": "ae2220bf795a9766c24e4fed20adab19",
+          "sha256": "88170d5e72638b0dbfec28cfbdfee02e97bd6a06d5a636e960acd5d90d480707"
+        }
+      }
+    ]
+  },
+  {
+    "package": "copulas",
+    "version": "0.14.1",
+    "requires_python": "<3.15,>=3.9",
+    "requires_dist": [
+      "numpy>=1.21.0; python_version < \"3.10\"",
+      "numpy>=1.23.3; python_version >= \"3.10\" and python_version < \"3.12\"",
+      "numpy>=1.26.0; python_version >= \"3.12\" and python_version < \"3.13\"",
+      "numpy>=2.1.0; python_version >= \"3.13\" and python_version < \"3.14\"",
+      "numpy>=2.3.2; python_version >= \"3.14\"",
+      "pandas<3,>=1.4.0; python_version < \"3.11\"",
+      "pandas<3,>=1.5.0; python_version >= \"3.11\" and python_version < \"3.12\"",
+      "pandas<3,>=2.1.1; python_version >= \"3.12\" and python_version < \"3.13\"",
+      "pandas<3,>=2.2.3; python_version >= \"3.13\" and python_version < \"3.14\"",
+      "pandas<3,>=2.3.3; python_version >= \"3.14\"",
+      "plotly>=5.10.0; python_version < \"3.13\"",
+      "plotly>=5.12.0; python_version >= \"3.13\"",
+      "scipy>=1.7.3; python_version < \"3.10\"",
+      "scipy>=1.9.2; python_version >= \"3.10\" and python_version < \"3.12\"",
+      "scipy>=1.12.0; python_version >= \"3.12\" and python_version < \"3.13\"",
+      "scipy>=1.14.1; python_version >= \"3.13\" and python_version < \"3.14\"",
+      "scipy>=1.16.1; python_version >= \"3.14\"",
+      "markupsafe>=2.0.1; extra == \"tutorials\"",
+      "scikit-learn>=0.24; python_version < \"3.12\" and extra == \"tutorials\"",
+      "scikit-learn>=1.3.1; python_version >= \"3.12\" and extra == \"tutorials\"",
+      "jupyter>=1.0.0; extra == \"tutorials\"",
+      "copulas[tutorials]; extra == \"test\"",
+      "pytest>=6.2.5; extra == \"test\"",
+      "pytest-cov>=2.6.0; extra == \"test\"",
+      "pytest-rerunfailures>=10.3; extra == \"test\"",
+      "tomli>=2.0.0; extra == \"test\"",
+      "copulas[test,tutorials]; extra == \"dev\"",
+      "pip>=9.0.1; extra == \"dev\"",
+      "build>=1.0.0; extra == \"dev\"",
+      "bump-my-version>=0.18.3; extra == \"dev\"",
+      "watchdog>=1.0.1; extra == \"dev\"",
+      "nbsphinx<0.10,>=0.9.7; extra == \"dev\"",
+      "Sphinx<7.5,>=7.4.7; extra == \"dev\"",
+      "sphinx_rtd_theme<3.1,>=3.0.2; extra == \"dev\"",
+      "sphinxcontrib_applehelp<2.1,>=2.0.0; extra == \"dev\"",
+      "sphinxcontrib-devhelp<2.1,>=2.0.0; extra == \"dev\"",
+      "sphinxcontrib-htmlhelp<2.2,>=2.1.0; extra == \"dev\"",
+      "sphinxcontrib_serializinghtml<2.1,>=2.0.0; extra == \"dev\"",
+      "sphinxcontrib_qthelp<2.1,>=2.0.0; extra == \"dev\"",
+      "alabaster<0.8,>=0.7.16; extra == \"dev\"",
+      "lxml-html-clean<0.5,>=0.4.1; extra == \"dev\"",
+      "Jinja2<3.2,>=3.1.6; extra == \"dev\"",
+      "myst_parser<4.1,>=3.0.1; extra == \"dev\"",
+      "ruff<1,>=0.3.2; extra == \"dev\"",
+      "twine>=1.10.0; extra == \"dev\"",
+      "wheel>=0.30.0; extra == \"dev\"",
+      "coverage<7.8,>=7.7.1; extra == \"dev\"",
+      "invoke; extra == \"dev\"",
+      "urllib3<2.4,>=1.26.20; extra == \"dev\"",
+      "tabulate<0.10,>=0.9.0; extra == \"dev\"",
+      "boto3<1.38,>=1.37.18; extra == \"dev\"",
+      "docutils<0.22,>=0.21.2; extra == \"dev\"",
+      "rundoc<0.5,>=0.4.3; extra == \"readme\""
+    ],
+    "release_files": [
+      {
+        "filename": "copulas-0.14.1-py3-none-any.whl",
+        "upload_time_iso_8601": "2026-02-05T18:52:39.263279Z",
+        "digests": {
+          "blake2b_256": "502c7984ead5c59c7d3066d6c7b6a7839991a317ecfb3ab1f963900e14f3c339",
+          "md5": "1ea56f1ee3e044fea975560b87398541",
+          "sha256": "6f010444385a304274e7587b45f56b860ca38b621529ad0f9bbd4024de91dd1d"
+        }
+      },
+      {
+        "filename": "copulas-0.14.1.tar.gz",
+        "upload_time_iso_8601": "2026-02-05T18:52:41.019632Z",
+        "digests": {
+          "blake2b_256": "3da8f15432ee5a691eafb7ecc5637c01843df92c0801aa83151c35d0fb190c92",
+          "md5": "2be116d8003bcd90730cab9edcee72bb",
+          "sha256": "adec8f65c98f16816bde5a03e9e7e7b3df91f3fb22ef9fd5023ebba8dd1628c8"
+        }
+      }
+    ]
+  },
+  {
+    "package": "ctgan",
+    "version": "0.12.1",
+    "requires_python": "<3.15,>=3.9",
+    "requires_dist": [
+      "numpy>=1.21.0; python_version < \"3.10\"",
+      "numpy>=1.23.3; python_version >= \"3.10\" and python_version < \"3.12\"",
+      "numpy>=1.26.0; python_version >= \"3.12\" and python_version < \"3.13\"",
+      "numpy>=2.1.0; python_version >= \"3.13\" and python_version < \"3.14\"",
+      "numpy>=2.3.2; python_version >= \"3.14\"",
+      "pandas>=1.4.0; python_version < \"3.11\"",
+      "pandas>=1.5.0; python_version >= \"3.11\" and python_version < \"3.12\"",
+      "pandas>=2.1.1; python_version >= \"3.12\" and python_version < \"3.13\"",
+      "pandas>=2.2.3; python_version >= \"3.13\" and python_version < \"3.14\"",
+      "pandas>=2.3.3; python_version >= \"3.14\"",
+      "torch>=1.13.0; python_version < \"3.11\"",
+      "torch>=2.0.0; python_version >= \"3.11\" and python_version < \"3.12\"",
+      "torch>=2.3.0; python_version >= \"3.12\" and python_version < \"3.13\"",
+      "torch>=2.6.0; python_version >= \"3.13\" and python_version < \"3.14\"",
+      "torch>=2.9.0; python_version >= \"3.14\"",
+      "tqdm>=4.29",
+      "rdt>=1.14.0; python_version < \"3.14\"",
+      "rdt>=1.20.0; python_version >= \"3.14\"",
+      "pytest>=3.4.2; extra == \"test\"",
+      "pytest-rerunfailures<17,>=10.3; extra == \"test\"",
+      "pytest-cov>=2.6.0; extra == \"test\"",
+      "pytest-runner>=2.11.1; extra == \"test\"",
+      "tomli<3,>=2.0.0; extra == \"test\"",
+      "ctgan[test]; extra == \"dev\"",
+      "pip>=9.0.1; extra == \"dev\"",
+      "build<2,>=1.0.0; extra == \"dev\"",
+      "bump-my-version>=0.18.3; extra == \"dev\"",
+      "watchdog<5,>=1.0.1; extra == \"dev\"",
+      "ruff<1,>=0.4.5; extra == \"dev\"",
+      "twine>=1.10.0; extra == \"dev\"",
+      "wheel>=0.30.0; extra == \"dev\"",
+      "coverage<6,>=4.5.1; extra == \"dev\"",
+      "invoke; extra == \"dev\"",
+      "rundoc<0.5,>=0.4.3; extra == \"readme\""
+    ],
+    "release_files": [
+      {
+        "filename": "ctgan-0.12.1-py3-none-any.whl",
+        "upload_time_iso_8601": "2026-02-13T03:22:39.480693Z",
+        "digests": {
+          "blake2b_256": "a7c2e4761d20a9704ba7595ea7d14dc4880c3cd0bd81b8ae588435536b7d8f19",
+          "md5": "99a44de4a93f8ea1034497b0bfb23f1b",
+          "sha256": "38a3b83432643caa8381c74c49e6a079166efa40f8f6c3b7204db44d6d2c8f18"
+        }
+      },
+      {
+        "filename": "ctgan-0.12.1.tar.gz",
+        "upload_time_iso_8601": "2026-02-13T03:22:40.909711Z",
+        "digests": {
+          "blake2b_256": "f40e50724b2e49ad83c2ebd00d8b57753dc07f256b27e64aca1306de5f4666b8",
+          "md5": "4863940faa9951c275443ec90cb8694c",
+          "sha256": "e545c2b1a752affba3de2933a5f8037228e837f7a73f5593399b52cfe9611bc7"
+        }
+      }
+    ]
+  },
+  {
+    "package": "sdmetrics",
+    "version": "0.31.1",
+    "requires_python": "<3.15,>=3.9",
+    "requires_dist": [
+      "numpy>=1.22.2; python_version < \"3.10\"",
+      "numpy>=1.24.0; python_version >= \"3.10\" and python_version < \"3.12\"",
+      "numpy>=1.26.0; python_version >= \"3.12\" and python_version < \"3.13\"",
+      "numpy>=2.1.0; python_version >= \"3.13\" and python_version < \"3.14\"",
+      "numpy>=2.3.2; python_version >= \"3.14\"",
+      "pandas<3.0.0,>=1.4.0; python_version < \"3.11\"",
+      "pandas<3.0.0,>=1.5.0; python_version >= \"3.11\" and python_version < \"3.12\"",
+      "pandas<3.0.0,>=2.1.1; python_version >= \"3.12\" and python_version < \"3.13\"",
+      "pandas<3.0.0,>=2.2.3; python_version >= \"3.13\" and python_version < \"3.14\"",
+      "pandas<3.0.0,>=2.3.3; python_version >= \"3.14\"",
+      "scikit-learn>=1.0.2; python_version < \"3.10\"",
+      "scikit-learn>=1.1.0; python_version >= \"3.10\" and python_version < \"3.11\"",
+      "scikit-learn>=1.1.3; python_version >= \"3.11\" and python_version < \"3.12\"",
+      "scikit-learn>=1.3.1; python_version >= \"3.12\" and python_version < \"3.13\"",
+      "scikit-learn>=1.5.2; python_version >= \"3.13\" and python_version < \"3.14\"",
+      "scikit-learn>=1.8.0; python_version >= \"3.14\"",
+      "scipy>=1.7.3; python_version < \"3.10\"",
+      "scipy>=1.9.2; python_version >= \"3.10\" and python_version < \"3.12\"",
+      "scipy>=1.12.0; python_version >= \"3.12\" and python_version < \"3.13\"",
+      "scipy>=1.14.1; python_version >= \"3.13\" and python_version < \"3.14\"",
+      "scipy>=1.16.1; python_version >= \"3.14\"",
+      "copulas>=0.12.1; python_version < \"3.14\"",
+      "copulas>=0.14.0; python_version >= \"3.14\"",
+      "tqdm>=4.29",
+      "plotly>=5.19.0",
+      "torch>=1.8.0; python_version < \"3.10\" and extra == \"torch\"",
+      "torch>=2.0.0; (python_version >= \"3.10\" and python_version < \"3.12\") and extra == \"torch\"",
+      "torch>=2.2.0; (python_version >= \"3.12\" and python_version < \"3.13\") and extra == \"torch\"",
+      "torch>=2.6.0; (python_version >= \"3.13\" and python_version < \"3.14\") and extra == \"torch\"",
+      "torch>=2.8.0; python_version >= \"3.14\" and extra == \"torch\"",
+      "pomegranate<2.0,>=1.1.2; extra == \"pomegranate\"",
+      "xgboost>=2.1.3; python_version < \"3.10\" and extra == \"xgboost\"",
+      "xgboost>=3.0.0; python_version >= \"3.10\" and extra == \"xgboost\"",
+      "sdmetrics[pomegranate,torch,xgboost]; extra == \"test\"",
+      "pytest>=6.2.5; extra == \"test\"",
+      "pytest-cov>=2.6.0; extra == \"test\"",
+      "pytest-rerunfailures<17,>=10.3; extra == \"test\"",
+      "jupyter<2,>=1.0.0; extra == \"test\"",
+      "tomli<3,>=2.0.0; extra == \"test\"",
+      "invoke; extra == \"test\"",
+      "pytest-runner>=2.11.1; extra == \"test\"",
+      "rundoc<0.5,>=0.4.3; extra == \"readme\"",
+      "sdmetrics[test,torch]; extra == \"dev\"",
+      "build<2,>=1.0.0; extra == \"dev\"",
+      "bump-my-version>=0.18.3; extra == \"dev\"",
+      "pip>=9.0.1; extra == \"dev\"",
+      "watchdog<5,>=1.0.1; extra == \"dev\"",
+      "ruff<1,>=0.3.2; extra == \"dev\"",
+      "twine>=1.10.0; extra == \"dev\"",
+      "wheel>=0.30.0; extra == \"dev\"",
+      "packaging<25,>=20; extra == \"dev\"",
+      "coverage<8,>=4.5.12; extra == \"dev\""
+    ],
+    "release_files": [
+      {
+        "filename": "sdmetrics-0.31.1-py3-none-any.whl",
+        "upload_time_iso_8601": "2026-09-18T20:20:29.309098Z",
+        "digests": {
+          "blake2b_256": "ca89d5b44bd0cbee205a09e6208f8b9e5b36507851028453b2db5c876b860a33",
+          "md5": "bec42745349071c369f611ef51bef633",
+          "sha256": "5107ae09900bb01652dff8ab696b8589a0bb53cee0dd5df11a968d28b071ab9f"
+        }
+      },
+      {
+        "filename": "sdmetrics-0.31.1.tar.gz",
+        "upload_time_iso_8601": "2026-09-18T20:20:31.081416Z",
+        "digests": {
+          "blake2b_256": "b7c7153417a0eb1530e2942341be569ff6920553fa05dad3bfe3720d38ac6526",
+          "md5": "510b526d9a15f3b369017a675a68dcf9",
+          "sha256": "be2667ece4217b028bf96d8f126108091b61da2d915f215b9e00650c00ff90da"
+        }
+      }
+    ]
+  }
+]

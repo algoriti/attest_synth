@@ -1,0 +1,8 @@
+{
+  "cpu_model": "Intel(R) Core(TM) Ultra 7 155H",
+  "logical_cpus_visible": 22,
+  "cpu_affinity_count": 22,
+  "note": "Hardware captured after execution; timings are exploratory and are not isolated performance measurements.",
+  "cgroup_cpu_max": null,
+  "cgroup_memory_max": null
+}

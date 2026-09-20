@@ -1,0 +1,338 @@
+[
+  {
+    "id": "P01",
+    "year": "2019",
+    "title": "Xu et al. — Modeling Tabular Data using Conditional GAN",
+    "url": "https://papers.neurips.cc/paper_files/paper/2019/hash/254ed7d2de3b23ab10936522dd547b78-Abstract.html",
+    "read_depth": "Publisher abstract and paper introduction/method excerpt",
+    "supports": "Mixed feature types, conditional GAN approach, TVAE comparison and task-based evaluation; published benchmark not reproduced."
+  },
+  {
+    "id": "P02",
+    "year": "2017",
+    "title": "Ping, Stoyanovich and Howe — DataSynthesizer: Privacy-Preserving Synthetic Datasets",
+    "url": "https://faculty.washington.edu/billhowe/publications/pdfs/ping17datasynthesizer.pdf",
+    "read_depth": "Paper architecture/method sections plus installed source",
+    "supports": "Description/generation/inspection separation and independent/Bayesian modes; local execution is separately documented."
+  },
+  {
+    "id": "P03",
+    "year": "2016",
+    "title": "Nowok, Raab and Dibben — synthpop: Bespoke Creation of Synthetic Data in R",
+    "url": "https://www.jstatsoft.org/article/view/v074i11",
+    "read_depth": "Publisher page and author project methodology",
+    "supports": "Sequential conditional synthesis is an established alternative; no local R experiment."
+  },
+  {
+    "id": "P04",
+    "year": "2023",
+    "title": "Watson et al. — Adversarial Random Forests for Density Estimation and Generative Modeling",
+    "url": "https://proceedings.mlr.press/v206/watson23a.html",
+    "read_depth": "Publisher abstract; Python implementation inspected and run",
+    "supports": "Tree-based iterative generation/discrimination and reported authors’ benchmark results; no reproduced two-orders-of-magnitude claim."
+  },
+  {
+    "id": "P05",
+    "year": "2022",
+    "title": "McKenna et al. — AIM: An Adaptive and Iterative Mechanism for Differentially Private Synthetic Data",
+    "url": "https://arxiv.org/abs/2201.12677",
+    "read_depth": "Original author abstract screened",
+    "supports": "Adaptive private query measurement and generation; no local AIM utility or privacy result."
+  },
+  {
+    "id": "P06",
+    "year": "2021",
+    "title": "McKenna et al. — Winning the NIST Contest: A Scalable and General Approach to Differentially Private Synthetic Data",
+    "url": "https://arxiv.org/abs/2108.04978",
+    "read_depth": "Original author abstract screened",
+    "supports": "MST/NIST-MST context; no assertion of universal superiority."
+  },
+  {
+    "id": "P07",
+    "year": "2022",
+    "title": "Stadler, Oprisanu and Troncoso — Synthetic Data: Anonymisation Groundhog Day",
+    "url": "https://www.usenix.org/conference/usenixsecurity22/presentation/stadler",
+    "read_depth": "Publisher abstract and original paper discovery",
+    "supports": "Empirical privacy/utility failure modes for evaluated models; not a theorem against all synthesis."
+  },
+  {
+    "id": "P08",
+    "year": "2025",
+    "title": "A Scoping Review of Privacy and Utility Metrics in Medical Synthetic Data",
+    "url": "https://www.nature.com/articles/s41746-024-01359-3",
+    "read_depth": "Results/discussion retrieved earlier in this session; later fetch redirected",
+    "supports": "Evidence of evaluation gaps and limitations of similarity-based privacy measures. Healthcare scope is not the platform scope."
+  },
+  {
+    "id": "P09",
+    "year": "2023",
+    "title": "Kotelnikov et al. — TabDDPM: Modelling Tabular Data with Diffusion Models",
+    "url": "https://proceedings.mlr.press/v202/kotelnikov23a/kotelnikov23a.pdf",
+    "read_depth": "Original abstract/method overview and repository",
+    "supports": "Mixed-feature diffusion family; not locally trained."
+  },
+  {
+    "id": "P10",
+    "year": "2024",
+    "title": "Mixed-Type Tabular Data Synthesis with Score-based Diffusion in Latent Space (TabSyn)",
+    "url": "https://proceedings.iclr.cc/paper_files/paper/2024/hash/e9750610639c3e7a849cff746bf60dbd-Abstract-Conference.html",
+    "read_depth": "Publisher abstract and official repository screened",
+    "supports": "Latent VAE plus diffusion approach; reported quality/speed not replicated."
+  },
+  {
+    "id": "P11",
+    "year": "2023",
+    "title": "Borisov et al. — Language Models are Realistic Tabular Data Generators (GReaT)",
+    "url": "https://arxiv.org/abs/2210.06280",
+    "read_depth": "Original abstract and published ICLR paper excerpt",
+    "supports": "Fine-tuning for tabular synthesis and conditioning; distinct from a general chat assistant."
+  },
+  {
+    "id": "P12",
+    "year": "2023",
+    "title": "Solatorio and Dupriez — REaLTabFormer: Generating Realistic Relational and Tabular Data using Transformers",
+    "url": "https://arxiv.org/abs/2302.02041",
+    "read_depth": "Original abstract and official repository/docs",
+    "supports": "Tabular and relational transformer approach; topology-specific validation still needed."
+  },
+  {
+    "id": "P13",
+    "year": "2019",
+    "title": "Yoon, Jarrett and van der Schaar — Time-series Generative Adversarial Networks",
+    "url": "https://proceedings.neurips.cc/paper/2019/hash/c9efe5f26cd17ba6216bbe2a7d26d490-Abstract.html",
+    "read_depth": "Publisher abstract and method excerpt",
+    "supports": "Temporal embedding with supervised/adversarial objectives; not locally trained."
+  },
+  {
+    "id": "P14",
+    "year": "2019 preprint",
+    "title": "Using GANs for Sharing Networked Time Series Data: Challenges, Initial Promise, and Open Questions (DoppelGANger)",
+    "url": "https://arxiv.org/abs/1909.13403",
+    "read_depth": "Original author abstract screened",
+    "supports": "Networked sequence fidelity and privacy challenges; local sensor scenario is not a replication."
+  },
+  {
+    "id": "P15",
+    "year": "2023",
+    "title": "Qian et al. — Synthcity: Facilitating Innovative Use Cases of Synthetic Data in Different Data Modalities",
+    "url": "https://arxiv.org/abs/2301.07573",
+    "read_depth": "Original abstract plus current repository and plugin source",
+    "supports": "Common plugin access across model families; broad scope alone does not determine integration fit."
+  },
+  {
+    "id": "P16",
+    "year": "2026 preprint",
+    "title": "Zhang et al. — TabQueryBench: A Query-Centric Benchmark for Synthetic Tabular Data",
+    "url": "https://arxiv.org/abs/2607.03926",
+    "read_depth": "Original abstract screened",
+    "supports": "Recent query-workload evaluation gap; no local reproduction or assumed peer review."
+  },
+  {
+    "id": "P17",
+    "year": "2024",
+    "title": "Decruyenaere et al. — The Real Deal Behind the Artificial Appeal: Inferential Utility of Tabular Synthetic Data",
+    "url": "https://proceedings.mlr.press/v244/decruyenaere24a.html",
+    "read_depth": "Publisher abstract screened",
+    "supports": "Statistical inference deserves separate evaluation from prediction."
+  },
+  {
+    "id": "P18",
+    "year": "2024 preprint",
+    "title": "Are LLMs Naturally Good at Synthetic Tabular Data Generation?",
+    "url": "https://arxiv.org/abs/2406.14541",
+    "read_depth": "Original abstract screened",
+    "supports": "Evidence of tabular-dependency limitations under the authors’ tested LLM setups; not a universal result."
+  },
+  {
+    "id": "T01",
+    "year": "snapshot 2026-09-20",
+    "title": "Copulas",
+    "url": "https://github.com/sdv-dev/Copulas/tree/83a004b63323026e47c11d683695f23c5f804412",
+    "read_depth": "README and license captured; source/execution where specified in tool report",
+    "supports": "Version-specific documented scope and license; see tool matrix and source traces."
+  },
+  {
+    "id": "T02",
+    "year": "snapshot 2026-09-20",
+    "title": "DataSynthesizer",
+    "url": "https://github.com/DataResponsibly/DataSynthesizer/tree/b969f618015d6313d03e109ad58aae2f8b12124d",
+    "read_depth": "README and license captured; source/execution where specified in tool report",
+    "supports": "Version-specific documented scope and license; see tool matrix and source traces."
+  },
+  {
+    "id": "T03",
+    "year": "snapshot 2026-09-20",
+    "title": "Synthcity",
+    "url": "https://github.com/vanderschaarlab/synthcity/tree/23f322fe381326ed01c41b13d469a06e38cce545",
+    "read_depth": "README and license captured; source/execution where specified in tool report",
+    "supports": "Version-specific documented scope and license; see tool matrix and source traces."
+  },
+  {
+    "id": "T04",
+    "year": "snapshot 2026-09-20",
+    "title": "SmartNoise SDK",
+    "url": "https://github.com/opendp/smartnoise-sdk/tree/677d0bb13ed6f51941739693f3d528eefc6efacf",
+    "read_depth": "README and license captured; source/execution where specified in tool report",
+    "supports": "Version-specific documented scope and license; see tool matrix and source traces."
+  },
+  {
+    "id": "T05",
+    "year": "snapshot 2026-09-20",
+    "title": "SDV",
+    "url": "https://github.com/sdv-dev/SDV/tree/cb6229d83921a1cf35e7cc5b4f947bc0e03699bd",
+    "read_depth": "README and license captured; source/execution where specified in tool report",
+    "supports": "Version-specific documented scope and license; see tool matrix and source traces."
+  },
+  {
+    "id": "T06",
+    "year": "snapshot 2026-09-20",
+    "title": "CTGAN",
+    "url": "https://github.com/sdv-dev/CTGAN/tree/66e5686fbc55a55eb137253dce115946f5785ba2",
+    "read_depth": "README and license captured; source/execution where specified in tool report",
+    "supports": "Version-specific documented scope and license; see tool matrix and source traces."
+  },
+  {
+    "id": "T07",
+    "year": "snapshot 2026-09-20",
+    "title": "SDMetrics",
+    "url": "https://github.com/sdv-dev/SDMetrics/tree/d35c170f1570387cf42085fc6c9316dad5c23a7a",
+    "read_depth": "README and license captured; source/execution where specified in tool report",
+    "supports": "Version-specific documented scope and license; see tool matrix and source traces."
+  },
+  {
+    "id": "T08",
+    "year": "snapshot 2026-09-20",
+    "title": "Synthea",
+    "url": "https://github.com/synthetichealth/synthea/tree/d9d07a6eef91ee5144293b42ab64224d84d124f8",
+    "read_depth": "README and license captured; source/execution where specified in tool report",
+    "supports": "Version-specific documented scope and license; see tool matrix and source traces."
+  },
+  {
+    "id": "T09",
+    "year": "snapshot 2026-09-20",
+    "title": "TAPAS",
+    "url": "https://github.com/alan-turing-institute/tapas/tree/a7069d7e040828db0da174d1b003fa03a98e5453",
+    "read_depth": "README and license captured; source/execution where specified in tool report",
+    "supports": "Version-specific documented scope and license; see tool matrix and source traces."
+  },
+  {
+    "id": "T10",
+    "year": "snapshot 2026-09-20",
+    "title": "Faker",
+    "url": "https://github.com/joke2k/faker/tree/975dd2a11d7f083cb028e2f07478ab401b5fde17",
+    "read_depth": "README and license captured; source/execution where specified in tool report",
+    "supports": "Version-specific documented scope and license; see tool matrix and source traces."
+  },
+  {
+    "id": "T11",
+    "year": "snapshot 2026-09-20",
+    "title": "REaLTabFormer",
+    "url": "https://github.com/worldbank/REaLTabFormer/tree/73f239643f9ea5abc877f685ce927e986302ac2d",
+    "read_depth": "README and license captured; source/execution where specified in tool report",
+    "supports": "Version-specific documented scope and license; see tool matrix and source traces."
+  },
+  {
+    "id": "T12",
+    "year": "snapshot 2026-09-20",
+    "title": "TabDDPM implementation",
+    "url": "https://github.com/yandex-research/tab-ddpm/tree/b476257dd460b778ba09eb97f7a51d6490fa17f8",
+    "read_depth": "README and license captured; source/execution where specified in tool report",
+    "supports": "Version-specific documented scope and license; see tool matrix and source traces."
+  },
+  {
+    "id": "T13",
+    "year": "snapshot 2026-09-20",
+    "title": "GReaT implementation",
+    "url": "https://github.com/tabularis-ai/be_great/tree/616b2e74b396fa1f9c7ab4412b9928eec849159a",
+    "read_depth": "README and license captured; source/execution where specified in tool report",
+    "supports": "Version-specific documented scope and license; see tool matrix and source traces."
+  },
+  {
+    "id": "T14",
+    "year": "snapshot 2026-09-20",
+    "title": "arfpy",
+    "url": "https://github.com/bips-hb/arfpy/tree/8b63c1b3999981125b4af2828ff52cba8e29169d",
+    "read_depth": "README and license captured; source/execution where specified in tool report",
+    "supports": "Version-specific documented scope and license; see tool matrix and source traces."
+  },
+  {
+    "id": "T15",
+    "year": "accessed 2026-09-20",
+    "title": "BlenderProc",
+    "url": "https://github.com/DLR-RM/BlenderProc",
+    "read_depth": "Official README screened; not pinned/run",
+    "supports": "Rendered labeled-image extension reference; assets and full dependency licensing not assessed."
+  },
+  {
+    "id": "T16",
+    "year": "accessed 2026-09-20",
+    "title": "Distilabel",
+    "url": "https://github.com/argilla-io/distilabel",
+    "read_depth": "Official README screened; not pinned/run",
+    "supports": "Text-generation and feedback pipeline extension reference; model-specific rights still required."
+  },
+  {
+    "id": "T17",
+    "year": "accessed 2026-09-20",
+    "title": "SimPy",
+    "url": "https://simpy.readthedocs.io/en/latest/",
+    "read_depth": "Official overview screened; not run",
+    "supports": "Discrete-event simulation capability, not a calibrated general domain model."
+  },
+  {
+    "id": "T18",
+    "year": "accessed 2026-09-20",
+    "title": "synthpop project",
+    "url": "https://www.synthpop.org.uk/about-synthpop.html",
+    "read_depth": "Official author methodology overview",
+    "supports": "Sequential synthesis, customization and confirmation against original data."
+  },
+  {
+    "id": "N01",
+    "year": "accessed 2026-09-20",
+    "title": "NIST SP 800-226 (March 2025 final)",
+    "url": "https://csrc.nist.gov/pubs/sp/800/226/final",
+    "read_depth": "Official publication page and publication text access",
+    "supports": "DP implementation hazards, scope of guarantees and complete-system consideration."
+  },
+  {
+    "id": "N02",
+    "year": "accessed 2026-09-20",
+    "title": "NIST SDNist Synthetic Data Report Tool",
+    "url": "https://www.nist.gov/services-resources/software/sdnist-synthetic-data-report-tool",
+    "read_depth": "Official software description screened",
+    "supports": "Independent evaluation and reporting reference; not run locally."
+  },
+  {
+    "id": "D01",
+    "year": "accessed 2026-09-20",
+    "title": "UCI Bank Marketing",
+    "url": "https://archive.ics.uci.edu/dataset/222/bank+marketing",
+    "read_depth": "Primary description and original CSV download",
+    "supports": "Task definition, provenance, attribution and license."
+  },
+  {
+    "id": "D02",
+    "year": "accessed 2026-09-20",
+    "title": "UCI Student Performance",
+    "url": "https://archive.ics.uci.edu/dataset/320/student+performance",
+    "read_depth": "Primary description and original CSV download",
+    "supports": "Subject subsets, earlier/final grades and use-case limitation."
+  },
+  {
+    "id": "D03",
+    "year": "accessed 2026-09-20",
+    "title": "UCI Wine Quality",
+    "url": "https://archive.ics.uci.edu/dataset/186/wine+quality",
+    "read_depth": "Primary description and original CSV download",
+    "supports": "Physicochemical features, outcome and attribution."
+  },
+  {
+    "id": "D04",
+    "year": "accessed 2026-09-20",
+    "title": "SmartNoise Synth documentation",
+    "url": "https://docs.smartnoise.org/synth/index.html",
+    "read_depth": "Official fit/sample and transformation documentation",
+    "supports": "Preprocessing budget and model-specific domain requirements; version check still required."
+  }
+]

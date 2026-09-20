@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:synthetic-platform:poc-spec:0.1",
+  "title": "SyntheticDataSpec draft 0.1 — single-table PoC",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["spec_version", "name", "mode", "purpose", "source", "rows", "columns", "constraints", "privacy", "evaluation"],
+  "properties": {
+    "spec_version": {"const": "0.1"},
+    "name": {"type": "string", "minLength": 1},
+    "mode": {"enum": ["schema_rules", "learned_table"]},
+    "purpose": {"enum": ["software_testing", "teaching", "analytics", "ml_development", "scenario_simulation"]},
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {"enum": ["none", "public_records", "approved_records"]},
+        "reference": {"type": "string"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "rows": {"type": "integer", "minimum": 1, "maximum": 1000000},
+    "columns": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["name", "type", "nullable", "origin"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "type": {"enum": ["integer", "number", "categorical", "string", "datetime", "boolean"]},
+          "nullable": {"type": "boolean"},
+          "role": {"enum": ["feature", "target", "identifier"]},
+          "minimum": {"type": "number"},
+          "maximum": {"type": "number"},
+          "categories": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": ["string", "number", "boolean"]}},
+          "origin": {
+            "type": "object", "additionalProperties": false,
+            "required": ["kind", "description"],
+            "properties": {
+              "kind": {"enum": ["user", "public_source", "learned_estimate", "unverified_assumption"]},
+              "description": {"type": "string", "minLength": 1},
+              "reference": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "constraints": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["operator", "columns"],
+        "properties": {
+          "operator": {"enum": ["unique", "less_or_equal", "product_equals"]},
+          "columns": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+        }
+      }
+    },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["requirement"],
+      "properties": {
+        "requirement": {"enum": ["no_formal_guarantee", "differential_privacy_required"]},
+        "protected_entity": {"type": "string"},
+        "policy_reference": {"type": "string"}
+      }
+    },
+    "evaluation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["checks"],
+      "properties": {
+        "checks": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["schema", "constraints", "fidelity", "predictive_utility", "privacy_audit"]}},
+        "target": {"type": "string"}
+      }
+    }
+  }
+}

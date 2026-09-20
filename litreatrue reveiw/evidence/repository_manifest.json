@@ -1,0 +1,282 @@
+[
+  {
+    "repo": "sdv-dev/Copulas",
+    "accessed_utc": "2026-09-20T16:12:49.738755+00:00",
+    "default_branch": "main",
+    "pushed_at": "2026-09-07T00:55:20Z",
+    "archived": false,
+    "license": {
+      "path": "LICENSE",
+      "url": "https://github.com/sdv-dev/Copulas/blob/83a004b63323026e47c11d683695f23c5f804412/LICENSE",
+      "sha256": "70e454da4a48a3d432cbb2afd99a580c821c92cae3aa53442fd73d21cd5aca8d"
+    },
+    "html_url": "https://github.com/sdv-dev/Copulas",
+    "commit": "83a004b63323026e47c11d683695f23c5f804412",
+    "commit_date": "2026-07-24T22:02:13Z",
+    "readme": {
+      "path": "README.md",
+      "url": "https://github.com/sdv-dev/Copulas/blob/83a004b63323026e47c11d683695f23c5f804412/README.md",
+      "sha256": "d4e2e475ff6710c7d297e6b75f2e7d4833cc870267f5c6b7c451f5f9fe757c98"
+    }
+  },
+  {
+    "repo": "DataResponsibly/DataSynthesizer",
+    "accessed_utc": "2026-09-20T16:12:49.739057+00:00",
+    "default_branch": "master",
+    "pushed_at": "2026-07-15T15:22:56Z",
+    "archived": false,
+    "license": {
+      "path": "LICENSE",
+      "url": "https://github.com/DataResponsibly/DataSynthesizer/blob/b969f618015d6313d03e109ad58aae2f8b12124d/LICENSE",
+      "sha256": "71f27f6f1bc7976f4cb3cf4327ce90be10a9d0c714c0c9a9b21f6efa4c278b0b"
+    },
+    "html_url": "https://github.com/DataResponsibly/DataSynthesizer",
+    "commit": "b969f618015d6313d03e109ad58aae2f8b12124d",
+    "commit_date": "2026-07-15T15:22:56Z",
+    "readme": {
+      "path": "README.md",
+      "url": "https://github.com/DataResponsibly/DataSynthesizer/blob/b969f618015d6313d03e109ad58aae2f8b12124d/README.md",
+      "sha256": "883e8acd43b4698840ab4cf03cd89fb77b8278fcc7c89e72e1493d4a72832978"
+    }
+  },
+  {
+    "repo": "vanderschaarlab/synthcity",
+    "accessed_utc": "2026-09-20T16:12:49.739717+00:00",
+    "default_branch": "main",
+    "pushed_at": "2026-04-21T17:24:15Z",
+    "archived": false,
+    "license": {
+      "path": "LICENSE",
+      "url": "https://github.com/vanderschaarlab/synthcity/blob/23f322fe381326ed01c41b13d469a06e38cce545/LICENSE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    "html_url": "https://github.com/vanderschaarlab/synthcity",
+    "commit": "23f322fe381326ed01c41b13d469a06e38cce545",
+    "commit_date": "2025-06-17T08:40:31Z",
+    "readme": {
+      "path": "README.md",
+      "url": "https://github.com/vanderschaarlab/synthcity/blob/23f322fe381326ed01c41b13d469a06e38cce545/README.md",
+      "sha256": "1878d0dc20e7d6ebecdf2b8abdc93219d2c5ded4ca9131ba007137b1d01ba253"
+    }
+  },
+  {
+    "repo": "opendp/smartnoise-sdk",
+    "accessed_utc": "2026-09-20T16:12:49.741829+00:00",
+    "default_branch": "main",
+    "pushed_at": "2026-07-01T09:38:15Z",
+    "archived": false,
+    "license": {
+      "path": "LICENSE",
+      "url": "https://github.com/opendp/smartnoise-sdk/blob/677d0bb13ed6f51941739693f3d528eefc6efacf/LICENSE",
+      "sha256": "6ee851941df1003fc679b942457eddef5ba8cafbc52d1503b37fc528d1b83299"
+    },
+    "html_url": "https://github.com/opendp/smartnoise-sdk",
+    "commit": "677d0bb13ed6f51941739693f3d528eefc6efacf",
+    "commit_date": "2026-04-21T19:47:07Z",
+    "readme": {
+      "path": "README.md",
+      "url": "https://github.com/opendp/smartnoise-sdk/blob/677d0bb13ed6f51941739693f3d528eefc6efacf/README.md",
+      "sha256": "48ef5298632687204ee77909fa068fb496045b02eafc3717181e20c12bceea0a"
+    }
+  },
+  {
+    "repo": "sdv-dev/SDV",
+    "accessed_utc": "2026-09-20T16:12:53.206267+00:00",
+    "default_branch": "main",
+    "pushed_at": "2026-09-18T17:53:03Z",
+    "archived": false,
+    "license": {
+      "path": "LICENSE",
+      "url": "https://github.com/sdv-dev/SDV/blob/cb6229d83921a1cf35e7cc5b4f947bc0e03699bd/LICENSE",
+      "sha256": "fcaa94d4732eb6af1a75ef2282e286786f3ca07e951b8e138b543fda19baf302"
+    },
+    "html_url": "https://github.com/sdv-dev/SDV",
+    "commit": "cb6229d83921a1cf35e7cc5b4f947bc0e03699bd",
+    "commit_date": "2026-09-09T16:15:11Z",
+    "readme": {
+      "path": "README.md",
+      "url": "https://github.com/sdv-dev/SDV/blob/cb6229d83921a1cf35e7cc5b4f947bc0e03699bd/README.md",
+      "sha256": "97d353d605fa6e2276748b7b0d12d24136e7f7cbdaf17d38fb277ba378266f5e"
+    }
+  },
+  {
+    "repo": "sdv-dev/CTGAN",
+    "accessed_utc": "2026-09-20T16:12:53.766049+00:00",
+    "default_branch": "main",
+    "pushed_at": "2026-09-14T00:09:31Z",
+    "archived": false,
+    "license": {
+      "path": "LICENSE",
+      "url": "https://github.com/sdv-dev/CTGAN/blob/66e5686fbc55a55eb137253dce115946f5785ba2/LICENSE",
+      "sha256": "612a53c77c651d509c602b3202dd76904c762a4984471d3543e85d8248d5f10d"
+    },
+    "html_url": "https://github.com/sdv-dev/CTGAN",
+    "commit": "66e5686fbc55a55eb137253dce115946f5785ba2",
+    "commit_date": "2026-09-08T21:03:26Z",
+    "readme": {
+      "path": "README.md",
+      "url": "https://github.com/sdv-dev/CTGAN/blob/66e5686fbc55a55eb137253dce115946f5785ba2/README.md",
+      "sha256": "e7d12fa28d3b4154d88686b9a3bf53e5a0ca1b60033285ebf0552425a6176a0a"
+    }
+  },
+  {
+    "repo": "sdv-dev/SDMetrics",
+    "accessed_utc": "2026-09-20T16:12:53.800314+00:00",
+    "default_branch": "main",
+    "pushed_at": "2026-09-19T02:19:21Z",
+    "archived": false,
+    "license": {
+      "path": "LICENSE",
+      "url": "https://github.com/sdv-dev/SDMetrics/blob/d35c170f1570387cf42085fc6c9316dad5c23a7a/LICENSE",
+      "sha256": "1310119ad2a00b68f05d86309aea0bf1d3853e747d4f5646b1bf60a5a07f09a8"
+    },
+    "html_url": "https://github.com/sdv-dev/SDMetrics",
+    "commit": "d35c170f1570387cf42085fc6c9316dad5c23a7a",
+    "commit_date": "2026-09-18T20:14:32Z",
+    "readme": {
+      "path": "README.md",
+      "url": "https://github.com/sdv-dev/SDMetrics/blob/d35c170f1570387cf42085fc6c9316dad5c23a7a/README.md",
+      "sha256": "e7ca3b6aa988a78a4377c37e4768601f32291a18bcf53307b8f1c2dd828d211c"
+    }
+  },
+  {
+    "repo": "synthetichealth/synthea",
+    "accessed_utc": "2026-09-20T16:12:54.176845+00:00",
+    "default_branch": "master",
+    "pushed_at": "2026-08-18T16:19:53Z",
+    "archived": false,
+    "license": {
+      "path": "LICENSE",
+      "url": "https://github.com/synthetichealth/synthea/blob/d9d07a6eef91ee5144293b42ab64224d84d124f8/LICENSE",
+      "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1"
+    },
+    "html_url": "https://github.com/synthetichealth/synthea",
+    "commit": "d9d07a6eef91ee5144293b42ab64224d84d124f8",
+    "commit_date": "2026-08-18T16:11:48Z",
+    "readme": {
+      "path": "README.md",
+      "url": "https://github.com/synthetichealth/synthea/blob/d9d07a6eef91ee5144293b42ab64224d84d124f8/README.md",
+      "sha256": "674a227885066e2787dce85a04b4f39fd411f7e1f616e7c26fed10735929c8f1"
+    }
+  },
+  {
+    "repo": "alan-turing-institute/tapas",
+    "accessed_utc": "2026-09-20T16:12:57.074347+00:00",
+    "default_branch": "main",
+    "pushed_at": "2023-09-06T15:45:06Z",
+    "archived": false,
+    "license": {
+      "path": "LICENSE",
+      "url": "https://github.com/alan-turing-institute/tapas/blob/a7069d7e040828db0da174d1b003fa03a98e5453/LICENSE",
+      "sha256": "379c31c4c5f1336e79a5664df9734344963486cc74b90d1bc7989623ccdbd9fb"
+    },
+    "html_url": "https://github.com/alan-turing-institute/tapas",
+    "commit": "a7069d7e040828db0da174d1b003fa03a98e5453",
+    "commit_date": "2023-09-06T15:44:13Z",
+    "readme": {
+      "path": "README.md",
+      "url": "https://github.com/alan-turing-institute/tapas/blob/a7069d7e040828db0da174d1b003fa03a98e5453/README.md",
+      "sha256": "281ff3be705549ea518d21aa512d16b9f3d735f78ae938e91840efb46d13e357"
+    }
+  },
+  {
+    "repo": "joke2k/faker",
+    "accessed_utc": "2026-09-20T16:12:57.770376+00:00",
+    "default_branch": "master",
+    "pushed_at": "2026-09-15T00:11:13Z",
+    "archived": false,
+    "license": {
+      "path": "LICENSE.txt",
+      "url": "https://github.com/joke2k/faker/blob/975dd2a11d7f083cb028e2f07478ab401b5fde17/LICENSE.txt",
+      "sha256": "cd5a5fbc8bacca52b88158ca562ac5f7c2e9adb27371cead51aaf4e61a657928"
+    },
+    "html_url": "https://github.com/joke2k/faker",
+    "commit": "975dd2a11d7f083cb028e2f07478ab401b5fde17",
+    "commit_date": "2026-09-15T00:11:07Z",
+    "readme": {
+      "path": "README.rst",
+      "url": "https://github.com/joke2k/faker/blob/975dd2a11d7f083cb028e2f07478ab401b5fde17/README.rst",
+      "sha256": "b54c445b67b18d97cbb4e129d8ed03fed5612bfbe83016c7458f7ad61d1346c0"
+    }
+  },
+  {
+    "repo": "worldbank/REaLTabFormer",
+    "accessed_utc": "2026-09-20T16:12:57.963269+00:00",
+    "default_branch": "main",
+    "pushed_at": "2026-01-04T08:38:37Z",
+    "archived": false,
+    "license": {
+      "path": "LICENSE",
+      "url": "https://github.com/worldbank/REaLTabFormer/blob/73f239643f9ea5abc877f685ce927e986302ac2d/LICENSE",
+      "sha256": "fb11fe9573168aa7f96555f0e7cafa8c9a8b44089646692626cf12fb95bf9db4"
+    },
+    "html_url": "https://github.com/worldbank/REaLTabFormer",
+    "commit": "73f239643f9ea5abc877f685ce927e986302ac2d",
+    "commit_date": "2026-01-04T08:37:52Z",
+    "readme": {
+      "path": "README.md",
+      "url": "https://github.com/worldbank/REaLTabFormer/blob/73f239643f9ea5abc877f685ce927e986302ac2d/README.md",
+      "sha256": "c238a2e1cb561a53ca22411227cb4e67a5dd5dda0a5210b0f4b5afbd02c52a12"
+    }
+  },
+  {
+    "repo": "yandex-research/tab-ddpm",
+    "accessed_utc": "2026-09-20T16:12:58.180574+00:00",
+    "default_branch": "main",
+    "pushed_at": "2024-07-13T04:02:14Z",
+    "archived": false,
+    "license": {
+      "path": "LICENSE.md",
+      "url": "https://github.com/yandex-research/tab-ddpm/blob/b476257dd460b778ba09eb97f7a51d6490fa17f8/LICENSE.md",
+      "sha256": "be701b4d15238cf3c2d730ead1b72868a99e397fe872da0e89e07ce50e68ca99"
+    },
+    "html_url": "https://github.com/yandex-research/tab-ddpm",
+    "commit": "b476257dd460b778ba09eb97f7a51d6490fa17f8",
+    "commit_date": "2023-03-09T13:05:33Z",
+    "readme": {
+      "path": "README.md",
+      "url": "https://github.com/yandex-research/tab-ddpm/blob/b476257dd460b778ba09eb97f7a51d6490fa17f8/README.md",
+      "sha256": "99b1a451d7161264e8e32433c9b5c4da74879bcd83d1dc3f47a704d8951e652d"
+    }
+  },
+  {
+    "repo": "tabularis-ai/be_great",
+    "accessed_utc": "2026-09-20T16:13:01.238226+00:00",
+    "default_branch": "main",
+    "pushed_at": "2026-08-16T16:08:24Z",
+    "archived": false,
+    "license": {
+      "path": "LICENSE",
+      "url": "https://github.com/tabularis-ai/be_great/blob/616b2e74b396fa1f9c7ab4412b9928eec849159a/LICENSE",
+      "sha256": "8cca1b8d2a9b78541e2ed5a92b5133a87ba535a64565d2b8aee2f520dcf49f23"
+    },
+    "html_url": "https://github.com/tabularis-ai/be_great",
+    "commit": "616b2e74b396fa1f9c7ab4412b9928eec849159a",
+    "commit_date": "2026-08-16T16:08:23Z",
+    "readme": {
+      "path": "README.md",
+      "url": "https://github.com/tabularis-ai/be_great/blob/616b2e74b396fa1f9c7ab4412b9928eec849159a/README.md",
+      "sha256": "b4e40b73e8e0cab8b6064c1f93e8c1d58146fd7fcc06dcfca57e991d8e26d6ad"
+    }
+  },
+  {
+    "repo": "bips-hb/arfpy",
+    "accessed_utc": "2026-09-20T16:13:01.492869+00:00",
+    "default_branch": "main",
+    "pushed_at": "2026-06-01T16:53:18Z",
+    "archived": false,
+    "license": {
+      "path": "LICENSE",
+      "url": "https://github.com/bips-hb/arfpy/blob/8b63c1b3999981125b4af2828ff52cba8e29169d/LICENSE",
+      "sha256": "8f97b1e0e6c2a7c7b539e63e8a5c81c85d040556940a07b348596cd9674283ec"
+    },
+    "html_url": "https://github.com/bips-hb/arfpy",
+    "commit": "8b63c1b3999981125b4af2828ff52cba8e29169d",
+    "commit_date": "2026-06-01T16:53:14Z",
+    "readme": {
+      "path": "README.md",
+      "url": "https://github.com/bips-hb/arfpy/blob/8b63c1b3999981125b4af2828ff52cba8e29169d/README.md",
+      "sha256": "43cef6e91607938d07babdf668e5eb391f26082bb06550a41955116bcf0a7def"
+    }
+  }
+]

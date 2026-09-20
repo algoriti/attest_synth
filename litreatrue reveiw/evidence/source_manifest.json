@@ -1,0 +1,65 @@
+[
+  {
+    "repo": "vanderschaarlab/synthcity",
+    "commit": "23f322fe381326ed01c41b13d469a06e38cce545",
+    "path": "src/synthcity/plugins/core/plugin.py",
+    "url": "https://raw.githubusercontent.com/vanderschaarlab/synthcity/23f322fe381326ed01c41b13d469a06e38cce545/src/synthcity/plugins/core/plugin.py",
+    "sha256": "f28038201a90c86bb6349a9723a96b16ffea2cb5a8b6da5481509c0fe3f3e3fa"
+  },
+  {
+    "repo": "vanderschaarlab/synthcity",
+    "commit": "23f322fe381326ed01c41b13d469a06e38cce545",
+    "path": "src/synthcity/plugins/core/dataloader.py",
+    "url": "https://raw.githubusercontent.com/vanderschaarlab/synthcity/23f322fe381326ed01c41b13d469a06e38cce545/src/synthcity/plugins/core/dataloader.py",
+    "sha256": "e02a5d87315e69d52c0b12e5abddadab73d27b9e40fc8893495b908302e0764d"
+  },
+  {
+    "repo": "vanderschaarlab/synthcity",
+    "commit": "23f322fe381326ed01c41b13d469a06e38cce545",
+    "path": "src/synthcity/plugins/generic/plugin_ctgan.py",
+    "url": "https://raw.githubusercontent.com/vanderschaarlab/synthcity/23f322fe381326ed01c41b13d469a06e38cce545/src/synthcity/plugins/generic/plugin_ctgan.py",
+    "sha256": "aac150057fbc11ca44b8b11c0783ef888d054f98d79c7aecc6783c93d1884fd4"
+  },
+  {
+    "repo": "vanderschaarlab/synthcity",
+    "commit": "23f322fe381326ed01c41b13d469a06e38cce545",
+    "path": "setup.py",
+    "url": "https://raw.githubusercontent.com/vanderschaarlab/synthcity/23f322fe381326ed01c41b13d469a06e38cce545/setup.py",
+    "sha256": "8394c28f01541f35fdf47c184708bcba6e5cd00e23d1c6b0df16923ff07e855c"
+  },
+  {
+    "repo": "opendp/smartnoise-sdk",
+    "commit": "677d0bb13ed6f51941739693f3d528eefc6efacf",
+    "path": "synth/snsynth/base.py",
+    "url": "https://raw.githubusercontent.com/opendp/smartnoise-sdk/677d0bb13ed6f51941739693f3d528eefc6efacf/synth/snsynth/base.py",
+    "sha256": "e50685d32fd2ec2d3bf7148df84cc2275240fe725c60aa97eabf6a609dfe2893"
+  },
+  {
+    "repo": "opendp/smartnoise-sdk",
+    "commit": "677d0bb13ed6f51941739693f3d528eefc6efacf",
+    "path": "synth/snsynth/mst/mst.py",
+    "url": "https://raw.githubusercontent.com/opendp/smartnoise-sdk/677d0bb13ed6f51941739693f3d528eefc6efacf/synth/snsynth/mst/mst.py",
+    "sha256": "31bb230dbe628c9196cf6edaa0c5b92d786a7919aa4a1a8cfd131b93d6fc21e2"
+  },
+  {
+    "repo": "opendp/smartnoise-sdk",
+    "commit": "677d0bb13ed6f51941739693f3d528eefc6efacf",
+    "path": "synth/snsynth/transform/table.py",
+    "url": "https://raw.githubusercontent.com/opendp/smartnoise-sdk/677d0bb13ed6f51941739693f3d528eefc6efacf/synth/snsynth/transform/table.py",
+    "sha256": "786e74b01b41588a2fd25981aa875815aabb8a3f34dfe0873185c66699e522de"
+  },
+  {
+    "repo": "opendp/smartnoise-sdk",
+    "commit": "677d0bb13ed6f51941739693f3d528eefc6efacf",
+    "path": "synth/pyproject.toml",
+    "url": "https://raw.githubusercontent.com/opendp/smartnoise-sdk/677d0bb13ed6f51941739693f3d528eefc6efacf/synth/pyproject.toml",
+    "sha256": "4e66a7ade12bce83c1369c6d41535b82546486536f9e659b0a5b6f41473a7d98"
+  },
+  {
+    "repo": "worldbank/REaLTabFormer",
+    "commit": "73f239643f9ea5abc877f685ce927e986302ac2d",
+    "path": "realtabformer/realtabformer.py",
+    "url": "https://raw.githubusercontent.com/worldbank/REaLTabFormer/73f239643f9ea5abc877f685ce927e986302ac2d/realtabformer/realtabformer.py",
+    "error": "404 Client Error: Not Found for url: https://raw.githubusercontent.com/worldbank/REaLTabFormer/73f239643f9ea5abc877f685ce927e986302ac2d/realtabformer/realtabformer.py"
+  }
+]

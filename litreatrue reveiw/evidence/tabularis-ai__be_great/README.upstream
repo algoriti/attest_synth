@@ -1,0 +1,303 @@
+<div align="center">
+  <picture>
+    <img alt="GReaT Logo" src="https://github.com/tabularis-ai/be_great/raw/main/imgs/GReaT_logo.png" width="365">
+  </picture>
+</div>
+
+<h3 align="center">Generation of Realistic Tabular data</h3>
+<p align="center">with pretrained Transformer-based language models</p>
+
+<p align="center">
+  <a href="https://pypi.org/project/be-great/">
+    <img alt="PyPI" src="https://badge.fury.io/py/be-great.svg">
+  </a>
+  <a href="https://pepy.tech/project/be-great">
+    <img alt="Downloads" src="https://static.pepy.tech/badge/be-great">
+  </a>
+  <a href="https://discord.com/channels/1310217643520819251/1434507060141359134">
+    <img alt="Discord" src="https://img.shields.io/discord/1310217643520819251?color=7289da&label=Discord&logo=discord&logoColor=ffffff">
+  </a>
+  <a href="https://colab.research.google.com/github/tabularis-ai/be_great/blob/main/examples/GReaT_colab_example.ipynb">
+    <img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg">
+  </a>
+</p>
+
+Our GReaT framework leverages the power of advanced pretrained Transformer language models to produce high-quality synthetic tabular data. Generate new data samples effortlessly with our user-friendly API in just a few lines of code. Please see our [publication](https://arxiv.org/pdf/2210.06280) for more details. 
+
+GReaT framework has also been adopted in practice on [Google’s Kaggle platform](https://www.kaggle.com/code/inversion/make-synthetic-crab-age-data), where it has been used to generate synthetic datasets across multiple competitions.
+
+&nbsp;
+
+## GReaT Installation
+
+The GReaT framework can be easily installed using with [pip](https://pypi.org/project/pip/) - requires a Python version >= 3.9: 
+```bash
+pip install be-great
+```
+
+
+
+## GReaT Quickstart
+
+In the example below, we show how the GReaT approach is used to generate synthetic tabular data for the California Housing dataset.
+```python
+from be_great import GReaT
+from sklearn.datasets import fetch_california_housing
+
+data = fetch_california_housing(as_frame=True).frame
+
+model = GReaT(llm='tabularisai/Qwen3-0.3B-distil', batch_size=32,  epochs=5,
+              fp16=True, dataloader_num_workers=4)
+model.fit(data)
+synthetic_data = model.sample(n_samples=100)
+```
+
+### Imputing a sample
+GReaT also features an interface to impute, i.e., fill in, missing values in arbitrary combinations. This requires a trained ``model``, for instance one obtained using the code snippet above, and a ```pd.DataFrame``` where missing values are set to NaN.
+A minimal example is provided below:
+```python
+# test_data: pd.DataFrame with samples from the distribution
+# model: GReaT trained on the data distribution that should be imputed
+
+# Drop values randomly from test_data
+import numpy as np
+for clm in test_data.columns:
+    test_data[clm]=test_data[clm].apply(lambda x: (x if np.random.rand() > 0.5 else np.nan))
+
+imputed_data = model.impute(test_data, max_length=200)
+```
+
+### Saving and Loading
+GReaT provides methods for saving a model checkpoint (besides the checkpoints stored by the huggingface transformers Trainer) and loading the checkpoint again.
+```python
+model = GReaT(llm='tabularisai/Qwen3-0.3B-distil', batch_size=32,  epochs=5, fp16=True)
+model.fit(data)
+model.save("my_directory")  # saves a "model.pt" and a "config.json" file
+model = GReaT.load_from_dir("my_directory")  # loads the model again
+
+# supports remote file systems via fsspec
+model.save("s3://my_bucket")
+model = GReaT.load_from_dir("s3://my_bucket")
+```
+
+## Optimizing GReaT for Challenging Datasets
+
+When working with small datasets or datasets with many features, GReaT offers specialized parameters to improve generation quality:
+
+```python
+# For small datasets or datasets with many features
+model = GReaT(
+    llm='tabularisai/Qwen3-0.3B-distil',  
+    float_precision=3,  # Limit floating-point precision to 3 decimal places
+    batch_size=8,       # Use smaller batch size for small datasets
+    epochs=100,         # Train for more epochs with small data
+    fp16=True           # Enable half-precision training for faster computation and lower memory usage
+)
+model.fit(data)
+
+# Use guided sampling for higher quality generation with complex feature sets
+synthetic_data = model.sample(
+    n_samples=100,
+    guided_sampling=True,     # Enable feature-by-feature guided generation
+    random_feature_order=True,  # Randomize feature order to avoid bias
+    temperature=0.7           # Control diversity of generated values, use lower temperature for challenging data
+)
+```
+
+The `guided_sampling=True` parameter enables a feature-by-feature generation approach, which can produce more reliable results for datasets with many features or complex relationships. While potentially slower than the default sampling method, it can help overcome generation challenges with difficult datasets.
+
+The `float_precision` parameter limits decimal places in numerical values, which can help the model focus on significant patterns rather than memorizing exact values. This is particularly helpful for small datasets where overfitting is a concern.
+
+## Conditional Synthetic Data Generation
+
+GReaT supports constrained sampling with logical operators — generate synthetic tabular data that satisfies conditions like `age >= 30` or `city != 'New York'`. Constraints are enforced during token generation, so every output row is valid with zero waste.
+
+```python
+from be_great import GReaT
+from ucimlrepo import fetch_ucirepo
+
+# Load the UCI Adult (Census Income) dataset
+adult = fetch_ucirepo(id=2)
+df = adult.data.features[["age", "workclass", "education", "sex", "hours-per-week"]].copy()
+df["income"] = adult.data.targets["income"]
+df = df[~df.isin(["?"]).any(axis=1)].dropna()
+
+model = GReaT(llm='distilgpt2', epochs=50, batch_size=32, float_precision=0)
+model.fit(df)
+
+# Generate synthetic data with constraints
+synthetic_data = model.sample(
+    n_samples=100,
+    conditions={
+        "age": ">= 40",
+        "hours-per-week": "<= 40",
+        "sex": "!= 'Male'",
+    },
+)
+```
+
+Supported operators for numeric columns: `>=`, `<=`, `>`, `<`, `==`, `!=`. For categorical columns: `==`, `!=` (quote values with single quotes, e.g. `"== 'Female'"`). Multiple conditions can be combined in a single call. Guided sampling is enabled automatically when conditions are provided.
+
+## GReaT Mock Data Generation with LLM (no real data needed)
+
+Generate synthetic rows from a **declarative schema** — no `fit()`, no training data. Useful for privacy-safe dummy data, test fixtures, dev environments, and schema prototyping. Works best when paired with a tabular-pretrained LLM such as [`tabularisai/Qwen3-0.3B-distil`](https://huggingface.co/tabularisai/Qwen3-0.3B-distil).
+
+```python
+from be_great import GReaT
+from be_great.great_mock_datasets import save_schema, load_schema
+
+schema = {
+    "age":            {"type": "num", "range": (18, 99), "integer": True,
+                       "dist": "normal", "mean": 38, "std": 13, "null_prob": 0.05},
+    "hours-per-week": {"type": "num", "range": (0, 80), "integer": True},
+    "sex":            {"type": "cat", "values": ["Male", "Female", "Other"],
+                       "weights": [0.5, 0.45, 0.05]},
+    "income":         {"type": "cat", "values": ["<=50K", ">50K"],
+                       "weights": [0.76, 0.24]},
+}
+
+# Optional: persist/share the schema
+save_schema(schema, "adult_schema.json")          # or .yaml
+schema = load_schema("adult_schema.json")
+
+model = GReaT(llm="tabularisai/Qwen3-0.3B-distil")
+mock = model.mock(
+    schema=schema,
+    n_samples=100,
+    conditions={"age": ">= 40", "sex": "!= 'Male'"},   # same syntax as sample()
+    examples=[                                          # few-shot rows for realism
+        {"age": 35, "sex": "Female", "income": "<=50K"},
+        {"age": 52, "sex": "Male",   "income": ">50K"},
+    ],
+    seed=42,                                            # reproducible across runs
+)
+```
+
+Schema features:
+
+- **Per-column types**: `"num"` with `range`, plus optional `integer`, `precision`, `dist="normal"` + `mean` + `std`. `"cat"` with `values` and optional `weights` (list or dict).
+- **`null_prob`** (0–1) injects realistic missing values per column after generation.
+- **`conditions=`** uses the same operator vocabulary as `sample()` — they tighten the schema's implicit constraints.
+- **`examples=`** prepends few-shot demonstration rows to the prompt — big realism boost for LLMs that don't natively know the GReaT row format.
+- **`seed=`** makes the entire output deterministic.
+- **`save_schema` / `load_schema`** support JSON and YAML for sharing schemas across teams or environments.
+
+## Efficient Fine-Tuning with LoRA
+
+GReaT supports LoRA (Low-Rank Adaptation) for parameter-efficient fine-tuning. This drastically reduces memory usage and training time, making it possible to fine-tune larger models on consumer hardware.
+
+```python
+pip install peft
+```
+
+```python
+# LoRA with auto-detected target modules (works across model architectures)
+model = GReaT(
+    llm='meta-llama/Llama-3.1-8B-Instruct',
+    batch_size=32,
+    epochs=5,
+    efficient_finetuning="lora",
+    fp16=True,
+)
+model.fit(data)
+synthetic_data = model.sample(n_samples=100)
+```
+
+You can also customize the LoRA hyperparameters:
+
+```python
+model = GReaT(
+    llm='tabularisai/Qwen3-0.3B-distil',
+    batch_size=32,
+    epochs=5,
+    efficient_finetuning="lora",
+    lora_config={
+        "r": 8,
+        "lora_alpha": 16,
+        "lora_dropout": 0.1,
+        "target_modules": ["q_proj", "v_proj"],  # optional, auto-detected if omitted
+    },
+    fp16=True,
+)
+model.fit(data)
+```
+
+## Live Quality Monitoring During Training
+
+Pass a held-out evaluation set to `fit()` to track synthesis quality **as the model trains** — no need to wait for training to finish. After each epoch (or every N steps), GReaT samples from the in-training model, scores it against `eval_data` using `ColumnShapes` similarity, and shows the score live in the [chugchug](https://github.com/unnir/chugchug) progress bar.
+
+```python
+from sklearn.model_selection import train_test_split
+
+train_df, eval_df = train_test_split(data, test_size=0.2, random_state=42)
+
+model = GReaT(llm="distilgpt2", epochs=10, batch_size=32)
+model.fit(
+    train_df,
+    eval_data=eval_df,      # held-out comparison set
+    eval_n_samples=50,      # synth rows drawn per evaluation (default 50)
+    eval_every=None,        # None = end of every epoch; int = every N steps
+)
+```
+
+You'll see `q=0.612` appear in the chugchug bar (alongside `loss=…`, `lr=…`, `epoch=…`) plus a printed line `🎯 [quality @ step N] column_shapes_mean = 0.XXXX` after each evaluation. `column_shapes_mean` lives in `[0, 1]`; closer to **1.0** means the synthetic marginal distributions are indistinguishable from the real ones. Sampling during training is the cost driver — keep `eval_n_samples` small (20–50) for fast feedback, larger for a more stable score.
+
+## GReaT Metrics
+
+GReaT ships with a built-in evaluation suite to measure the quality, utility, and privacy of your synthetic data. All metrics follow the same interface:
+
+```python
+from be_great.metrics import ColumnShapes, DiscriminatorMetric, MLEfficiency, DistanceToClosestRecord
+
+# real_data: original pd.DataFrame
+# synthetic_data: generated pd.DataFrame from model.sample()
+
+ColumnShapes().compute(real_data, synthetic_data)
+DiscriminatorMetric().compute(real_data, synthetic_data)
+MLEfficiency(model=RandomForestClassifier, metric=accuracy_score,
+             model_params={"n_estimators": 100}).compute(
+    real_data, synthetic_data, label_col="target"
+)
+DistanceToClosestRecord().compute(real_data, synthetic_data)
+```
+
+### Statistical Metrics
+| Metric | What it measures |
+|---|---|
+| `ColumnShapes` | Per-column distribution similarity (KS test for numerical, TVD for categorical) |
+| `ColumnPairTrends` | Preservation of pairwise correlations (Pearson and Cramer's V) |
+| `BasicStatistics` | Comparison of mean, std, and median per column |
+
+### Fidelity & Utility Metrics
+| Metric | What it measures |
+|---|---|
+| `DiscriminatorMetric` | Trains a classifier to distinguish real from synthetic — score near 0.5 is best |
+| `MLEfficiency` | Trains on synthetic, tests on real — measures downstream task utility |
+
+### Privacy Metrics
+| Metric | What it measures |
+|---|---|
+| `DistanceToClosestRecord` | Distance from each synthetic record to its nearest real neighbor |
+| `kAnonymization` | Minimum equivalence class size (higher = better privacy) |
+| `lDiversity` | Diversity of sensitive attribute values within groups |
+| `IdentifiabilityScore` | Risk of linking a synthetic record back to a specific real individual |
+| `DeltaPresence` | Fraction of real records that have a near-exact synthetic match |
+| `MembershipInference` | Simulated attack: can an adversary detect training set members? |
+
+## GReaT Citation
+
+If you use GReaT, please link or cite our work:
+
+``` bibtex
+@inproceedings{borisov2023language,
+  title={Language Models are Realistic Tabular Data Generators},
+  author={Vadim Borisov and Kathrin Sessler and Tobias Leemann and Martin Pawelczyk and Gjergji Kasneci},
+  booktitle={The Eleventh International Conference on Learning Representations },
+  year={2023},
+  url={https://openreview.net/forum?id=cEygmQNOeI}
+}
+```
+
+## Custom Synthetic Data
+
+Need synthetic data for your data? drop me a message: https://unnir.github.io/

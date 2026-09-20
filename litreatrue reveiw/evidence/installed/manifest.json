@@ -1,0 +1,51 @@
+[
+  {
+    "module": "DataSynthesizer.DataDescriber",
+    "snapshot": "DataSynthesizer.DataDescriber.py",
+    "sha256": "aae3153bb086a4d94c8945a569a11efa55aeff5bece9e85cf4d547ab2a99339b"
+  },
+  {
+    "module": "DataSynthesizer.DataGenerator",
+    "snapshot": "DataSynthesizer.DataGenerator.py",
+    "sha256": "cd079fbc239a7888f053a79eca78baa68118dc8d0898e52c2fdeb6bdb1479873"
+  },
+  {
+    "module": "DataSynthesizer.lib.PrivBayes",
+    "snapshot": "DataSynthesizer.lib.PrivBayes.py",
+    "sha256": "630731561bf3dabb116504f85e262a681f695871dccf5dc95ca52177de61d450"
+  },
+  {
+    "module": "copulas.multivariate.gaussian",
+    "snapshot": "copulas.multivariate.gaussian.py",
+    "sha256": "6ffffd524826cddb86309c9ed2a9a7706331d63a2735fb1b9fac1280fdb18767"
+  },
+  {
+    "module": "arfpy.arf",
+    "snapshot": "arfpy.arf.py",
+    "sha256": "860f49dd232b78eba12d7a56ed88c9c6c814fae6938b9dbf047668874b368898"
+  },
+  {
+    "package": "DataSynthesizer",
+    "version": "0.1.13",
+    "snapshot": "DataSynthesizer.LICENSE",
+    "sha256": "71f27f6f1bc7976f4cb3cf4327ce90be10a9d0c714c0c9a9b21f6efa4c278b0b"
+  },
+  {
+    "package": "copulas",
+    "version": "0.14.1",
+    "snapshot": "copulas.LICENSE",
+    "sha256": "70e454da4a48a3d432cbb2afd99a580c821c92cae3aa53442fd73d21cd5aca8d"
+  },
+  {
+    "package": "arfpy",
+    "version": "0.1.1",
+    "snapshot": "arfpy.LICENSE",
+    "sha256": "8f97b1e0e6c2a7c7b539e63e8a5c81c85d040556940a07b348596cd9674283ec"
+  },
+  {
+    "package": "Faker",
+    "version": "40.39.0",
+    "snapshot": "Faker.LICENSE",
+    "sha256": "cd5a5fbc8bacca52b88158ca562ac5f7c2e9adb27371cead51aaf4e61a657928"
+  }
+]
