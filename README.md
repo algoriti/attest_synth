@@ -1,8 +1,8 @@
-# Attest
+# Attest Synth
 
 **Synthetic data that comes with its evidence.**
 
-Attest generates synthetic structured data from a versioned specification, and returns
+Attest Synth generates synthetic structured data from a versioned specification, and returns
 an evidence report stating what was actually done and what the result does *not*
 support.
 
@@ -30,9 +30,9 @@ Hand that to a machine-learning generator and it imitates all three as statistic
 distributions look healthy and the rows are nonsense: six-hour shifts carrying nine
 hours of overtime, staff marked late at ten past six in the morning.
 
-Same generator, same data, with and without Attest:
+Same generator, same data, with and without Attest Synth:
 
-| Check | Generator alone | Through Attest |
+| Check | Generator alone | Through Attest Synth |
 |---|---:|---:|
 | Overtime contradicts shift length | 592 | **0** |
 | Late flag contradicts clock-in | 48 | **0** |
@@ -65,7 +65,7 @@ test against, not good enough to draw conclusions from.
 
 ## What it will not do
 
-Attest refuses to overclaim. Asking a specification to permit a release claim is a
+Attest Synth refuses to overclaim. Asking a specification to permit a release claim is a
 validation **error**, not a setting.
 
 There is **no privacy mechanism** here, and the evidence for why that matters is in the
@@ -85,7 +85,7 @@ criteria before it ships.
 |---|---|
 | [How it works](docs/how-the-poc-works.md) | The full guide: design, roadmap, and every failure along the way |
 | [Platform README](platform/README.md) | Engines, roles, the expression vocabulary, running it |
-| [Literature review](litreatrue%20reveiw/README.md) | The research and benchmark the design is built on |
+| [Literature review](literature-review/README.md) | The research and benchmark the design is built on |
 
 ---
 

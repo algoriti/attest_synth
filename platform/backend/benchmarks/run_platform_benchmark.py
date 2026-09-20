@@ -26,7 +26,7 @@ def trial(dataset,engine,seed):
         def generate(self,spec,table,rows,source=None):
             frame=source.sample(n=rows,replace=True,random_state=spec.seed).reset_index(drop=True)
             return GenerationOutcome(frame=frame,engine=self.name,requested_rows=rows,generated_rows=len(frame),warnings=['BENCHMARK ONLY: copies source rows; no privacy.'])
-    path=ROOT/'litreatrue reveiw/benchmarks/data'
+    path=ROOT/'literature-review/benchmarks/data'
     file,cols,target,task={
         'bank':('bank.csv',['age','job','marital','education','balance','housing','loan','campaign','previous','poutcome','y'],'y','classification'),
         'student':('student-mat.csv',['school','sex','age','studytime','failures','schoolsup','higher','internet','absences','G1','G2','G3'],'G3','regression'),
