@@ -87,9 +87,13 @@ def _translate_arf_failure(
 class ArfEngine(EngineAdapter):
     name = "arf"
 
-    #: Leaves smaller than this are not split further. Raising it makes a degenerate
-    #: leaf less likely at some cost in fidelity.
-    min_node_size = 5
+    #: Leaves smaller than the first value are not split further. arfpy fails on a
+    #: leaf that holds a single distinct value for a numeric column, and that becomes
+    #: more likely as rows increase: on the attendance features it succeeded at 8,000
+    #: rows and failed at 16,000. Coarsening the leaves fixes it and is also faster
+    #: (79s against 106s at 16,000 rows), so the adapter escalates rather than giving
+    #: up, and says in the report that it did.
+    leaf_size_ladder = (5, 20, 50)
 
     def __init__(self) -> None:
         self._diagnostics: dict = {}
@@ -144,24 +148,42 @@ class ArfEngine(EngineAdapter):
             frame_in[name] = frame_in[name].astype("category")
 
         num_trees = 30
-        min_node_size = self.min_node_size
-        with _warnings.catch_warnings(record=True) as caught:
-            _warnings.simplefilter("always")
-            model = arf.arf(
-                frame_in,
-                num_trees=num_trees,
-                max_iters=3,
-                min_node_size=min_node_size,
-                verbose=False,
-                random_state=spec.seed,
-                n_jobs=1,
-            )
-            try:
-                model.forde()
-                raw = model.forge(rows)
-            except ValueError as exc:
-                raise _translate_arf_failure(exc, frame_in, min_node_size) from exc
-            collected = sorted({str(w.message) for w in caught})
+        ladder = list(self.leaf_size_ladder)
+        retries: list[str] = []
+        model = raw = None
+        min_node_size = ladder[0]
+
+        for attempt, min_node_size in enumerate(ladder):
+            with _warnings.catch_warnings(record=True) as caught:
+                _warnings.simplefilter("always")
+                try:
+                    model = arf.arf(
+                        frame_in,
+                        num_trees=num_trees,
+                        max_iters=3,
+                        min_node_size=min_node_size,
+                        verbose=False,
+                        random_state=spec.seed,
+                        n_jobs=1,
+                    )
+                    model.forde()
+                    raw = model.forge(rows)
+                except ValueError as exc:
+                    translated = _translate_arf_failure(exc, frame_in, min_node_size)
+                    if not isinstance(translated, ArfLeafDegeneracyError):
+                        raise translated from exc
+                    if attempt == len(ladder) - 1:
+                        raise translated from exc
+                    retries.append(
+                        f"Minimum leaf size {min_node_size} produced a leaf the engine "
+                        f"could not fit a distribution to; retried with "
+                        f"{ladder[attempt + 1]}."
+                    )
+                    continue
+                collected = sorted({str(w.message) for w in caught})
+            break
+
+        assert model is not None and raw is not None
 
         # arfpy reports one out-of-bag accuracy per adversarial iteration.
         accuracy = getattr(model, "acc", None)
@@ -201,7 +223,7 @@ class ArfEngine(EngineAdapter):
                 "modelled_columns": list(prepared.columns),
                 **self._diagnostics,
             },
-            warnings=collected,
+            warnings=retries + collected,
             repairs=repair_info["repairs"],
             repaired_row_fraction=repair_info["repaired_row_fraction"],
             raw_invalid_row_fraction=repair_info["raw_invalid_row_fraction"],

@@ -152,6 +152,42 @@ Available operators cover arithmetic, comparison, logic, null handling and time
 | `arf` | required | no | Adversarial random forest, MIT, CPU only |
 | `independent` | required | no | Baseline: matches marginals, destroys relationships |
 
+An engine declares what it can do, and the validator enforces it before any work
+starts. ARF, for instance, declares no support for `timestamp` or `date`, and a
+ceiling of 1,000 category levels. Both limits are real: arfpy raises a `TypeError` on
+a datetime, and models an object column as a factor at roughly quadratic cost, so
+21,790 distinct timestamps ran for minutes instead of failing. Unsupported requests
+are now rejected in milliseconds with a message saying what to do instead — and, for
+temporal columns, with a proposed rewrite.
+
+### When an engine cannot model a column
+
+The rejection comes with a suggested fix. A timestamp is split into hour-of-day and
+day-of-week, learned as ordinary numbers, then rebuilt afterwards as a derived column.
+A date gets weekday only, because a date sits at midnight and an extracted hour would
+be constant — which does not merely teach the model nothing, it makes arfpy fail
+fitting a truncated normal with zero scale.
+
+The mechanism is a lookup over two declared facts, with no model involved. The
+*content* is still a default nobody asked for, so every column it adds is recorded as
+`assistant_proposed` and appears in the report's open assumptions until someone
+accepts it. Nothing is applied unless explicitly named.
+
+Two honest limits on the rewrite: rebuilt values fall inside a single reference week,
+so they keep working patterns but not the original calendar date; and two rebuilt
+timestamps are independent, so a `less_or_equal` constraint is what keeps a clock-out
+after its clock-in.
+
+### Known upstream fragility
+
+arfpy 0.1.1 fails when the forest splits until a leaf holds one distinct value for a
+numeric column, raising a bare SciPy "Domain error in arguments". It becomes more
+likely with scale — on the attendance features it succeeded at 8,000 rows and failed
+at 16,000. The adapter escalates its minimum leaf size (5 → 20 → 50) rather than
+giving up, which also happens to be faster (79s against 106s at 16,000 rows), and
+records the retry in the report's warnings. If every rung fails, the error names the
+likely columns and the ways out.
+
 `independent` is kept deliberately. It is the floor every utility number is measured
 against — on the education benchmark it scored 3.967 MAE against real data's 0.994
 while matching the marginals almost perfectly.

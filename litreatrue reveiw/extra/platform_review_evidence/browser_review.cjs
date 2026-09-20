@@ -27,7 +27,18 @@ const path = require('node:path');
   await page.setViewportSize({width:390,height:844});
   await page.screenshot({path:path.join(__dirname,'ui_mobile_review.png'),fullPage:true});
   const mobile=await page.evaluate(()=>({viewport:innerWidth,documentWidth:document.documentElement.scrollWidth}));
-  fs.writeFileSync(path.join(__dirname,'browser_results.json'),JSON.stringify({examples,errors,reportText,rejection,generateDisabled,mobile},null,2));
-  console.log(JSON.stringify({examples,errors,generateDisabled,mobile}));
+  const hasSuggestedFix=await page.getByRole('button',{name:'Apply suggested fix',exact:true}).count();
+  let fixOutcome=null;
+  if(hasSuggestedFix){
+    await page.getByRole('button',{name:'Apply suggested fix',exact:true}).click();
+    await page.getByRole('button',{name:'Generate dataset',exact:true}).waitFor();
+    await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(b=>b.textContent==='Generate dataset'&&!b.disabled));
+    await page.getByRole('button',{name:'Generate dataset',exact:true}).click();
+    await page.waitForFunction(()=>document.querySelector('main')?.textContent.includes('Evidence report')||document.querySelector('main')?.textContent.includes('The engine failed'),{},{timeout:60000});
+    fixOutcome=await page.locator('main').innerText();
+    await page.screenshot({path:path.join(__dirname,'ui_after_suggested_fix.png'),fullPage:true});
+  }
+  fs.writeFileSync(path.join(__dirname,'browser_results.json'),JSON.stringify({examples,errors,reportText,rejection,generateDisabled,mobile,hasSuggestedFix,fixOutcome},null,2));
+  console.log(JSON.stringify({examples,errors,generateDisabled,mobile,hasSuggestedFix,fixSucceeded:fixOutcome?.includes('Evidence report')}));
   await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});

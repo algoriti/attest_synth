@@ -1,0 +1,45 @@
+{
+  "snapshot_utc": "2026-09-20T22:02:57.204268+00:00",
+  "python": "3.12.3",
+  "packages": {
+    "pandas": "2.3.3",
+    "numpy": "2.3.5",
+    "scikit-learn": "1.8.0",
+    "pydantic": "2.13.2",
+    "fastapi": "0.141.1",
+    "arfpy": "0.1.1",
+    "Faker": "40.39.0",
+    "pytest": "9.1.1"
+  },
+  "sha256": {
+    "platform/backend/synthetic_platform/__init__.py": "3ebd4a187648042f034d7221e19994981575619463d336b5fa0c54fae5361b07",
+    "platform/backend/synthetic_platform/api.py": "839cd937b388faf6beb8f2d17470aa7fdf0dba2f7285885c99f86948ed23c0cd",
+    "platform/backend/synthetic_platform/derive.py": "9e9cdbfe956841a10d2a8de075bc77c845f7c97066061552f0877cba73146cca",
+    "platform/backend/synthetic_platform/engines/__init__.py": "85bc755b94fed232268d609a9df204460057dbde62d689a602ec4d148fa896e5",
+    "platform/backend/synthetic_platform/engines/base.py": "c99f4f7e4b0fbde120a1c1f77c470d44cacdc48ce0f0c379618d6f9887510954",
+    "platform/backend/synthetic_platform/engines/learned.py": "f730ddc15ee16d42b52fcedce1ccdf7d977b2564ead9e6de5f2703a395277c78",
+    "platform/backend/synthetic_platform/engines/relational.py": "2a33d6a991ded90560150bfa0c2eb14499f742027a3be592b7199da69cdcbdd7",
+    "platform/backend/synthetic_platform/engines/rules.py": "5975c9add082b799cf606a734e1c13ada3dbc44d9e1f3cccb0441165d65fdc9b",
+    "platform/backend/synthetic_platform/evaluate.py": "bc81220ce670ea907650fc2408f2352b95e337bb122dd1d060c1555070871235",
+    "platform/backend/synthetic_platform/pipeline.py": "3976c861b1b4bd21ba948b56f09e7213fe74fc2035a9f8c2e6d34694c5aab516",
+    "platform/backend/synthetic_platform/profile.py": "b12cceabf664b4158fa50c8e3e0c4715bb92492cf4f42ec24479beff0dd66b19",
+    "platform/backend/synthetic_platform/spec.py": "52eb586f6a996ccb3d9eedb59dab356a26c959b147c1d2557156cc1d83f9f6e6",
+    "platform/backend/synthetic_platform/suggest.py": "7a0c6778ec058ea4da8962be0c5a9e25de9af64dbf681f71eaedc6536dafabfa",
+    "platform/backend/synthetic_platform/validator.py": "e6c981e4d3f26e6d3792917c9a65447c5ec5c9ad9a8d2c3910c6044bc1757057",
+    "platform/frontend/src/App.tsx": "b0ec5e8f5696a9fe0188acf1fd8af0fe45b838af6e2e21aad969cb5dea458d1e",
+    "platform/frontend/src/ReportView.tsx": "4ddce63e52e7f9d44bca6d7686caee8cc2554325a9b3c9753b070b2baf5af20a",
+    "platform/frontend/src/components.tsx": "1d6570e5d5b2e36c866cb115444631ddbe50915a97a2eb1f161060b7c5895d76",
+    "platform/frontend/src/main.tsx": "daedab8e601d5b57b2e2bf1b61a85ca18894c350e267b4ef260fec4f300e6318",
+    "platform/frontend/src/api.ts": "336e570b7891d99bae730d5560b9607a5578ad3de158e75e4ba73194e01e7913",
+    "platform/frontend/src/useChartColors.ts": "8982210c5a787e3ec89185f1dcdc32be22f89f57cef6535a7f48f1ccf8d3df55",
+    "platform/backend/specs/employee_relational.json": "001cfe7c11b061d677f113d9cfb90eda9b67c648f2e49cf0b0d4705c21eed532",
+    "platform/backend/specs/retail_orders.json": "1aa396bd2591bcdd15abefe8b29b32959f582a404de7dc3e2fffbeacf0bc09c6",
+    "platform/backend/specs/sensor_readings.json": "e02ecca727219054d5d857e6afe4e5fa6d726b6fa184aece7b1e5ab444c6e342"
+  },
+  "validation": {
+    "backend_tests": "60 passed in 2.28s",
+    "frontend_build": "passed; bundle size warning",
+    "browser": "employee relational flow completed; timestamp rewrite accepted; ARF value-name collision reproduced",
+    "probe_count": 9
+  }
+}

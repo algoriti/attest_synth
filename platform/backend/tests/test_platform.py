@@ -990,3 +990,86 @@ def test_cardinality_ceiling_ignores_identifiers():
     )
     result = validate(spec, get_engine("arf").capabilities())
     assert not any(f.code == "too_many_category_levels" for f in result.errors)
+
+
+# --- arfpy leaf degeneracy --------------------------------------------------------
+
+
+def test_leaf_degeneracy_is_translated_into_an_actionable_error():
+    """SciPy's bare domain error names neither the library, the column nor the cause."""
+    from synthetic_platform.engines.learned import (
+        ArfLeafDegeneracyError,
+        _translate_arf_failure,
+    )
+
+    frame = pd.DataFrame({"flag": [1, 1, 1, 2], "value": [1.0, 2.0, 3.0, 4.0]})
+    translated = _translate_arf_failure(
+        ValueError("Domain error in arguments. The `scale` parameter must be positive"),
+        frame,
+        5,
+    )
+    assert isinstance(translated, ArfLeafDegeneracyError)
+    message = str(translated)
+    assert "min_node_size=5" in message
+    assert "'flag' (2 distinct)" in message  # names the likeliest culprit
+
+
+def test_unrelated_engine_errors_are_not_disguised():
+    from synthetic_platform.engines.learned import _translate_arf_failure
+
+    original = ValueError("something else entirely")
+    assert _translate_arf_failure(original, pd.DataFrame({"a": [1]}), 5) is original
+
+
+def test_engine_escalates_leaf_size_and_reports_the_retry(monkeypatch):
+    """A degenerate leaf is recovered from, not surrendered to — and it is disclosed.
+
+    Regression: on the attendance features arfpy succeeded at 8,000 rows and raised a
+    bare SciPy domain error at 16,000. Coarsening the leaves fixes it, so the adapter
+    escalates rather than failing, and records that it had to.
+    """
+    from synthetic_platform.engines import learned as learned_module
+
+    attempts: list[int] = []
+
+    class FakeArf:
+        def __init__(self, frame, **kwargs):
+            attempts.append(kwargs["min_node_size"])
+            self._frame = frame
+            self.acc = [0.5]
+
+        def forde(self):
+            if attempts[-1] < 20:  # the small leaf size is the one that fails
+                raise ValueError(
+                    "Domain error in arguments. The `scale` parameter must be positive"
+                )
+
+        def forge(self, n):
+            return pd.DataFrame(
+                {c: self._frame[c].head(1).repeat(n).to_numpy() for c in self._frame}
+            )
+
+    # The adapter imports arfpy inside generate(), so patching the module attribute
+    # is enough to stand in for the real forest.
+    import arfpy.arf as arf_module
+
+    monkeypatch.setattr(arf_module, "arf", FakeArf)
+
+    source = pd.DataFrame({"amount": np.linspace(0, 10, 60), "grade": ["a", "b"] * 30})
+    table, _ = profile_csv(source, "t")
+    spec = SyntheticDataSpec(
+        name="t", mode=Mode.LEARNED_TABLE, purpose=Purpose.ML_DEVELOPMENT,
+        engine="arf", tables=[table],
+    )
+    outcome = learned_module.ArfEngine().generate(spec, table, 10, source)
+
+    assert attempts == [5, 20]
+    assert outcome.settings["min_node_size"] == 20
+    assert any("retried with 20" in w for w in outcome.warnings)
+
+
+def test_leaf_size_ladder_only_coarsens():
+    from synthetic_platform.engines.learned import ArfEngine
+
+    ladder = list(ArfEngine.leaf_size_ladder)
+    assert ladder == sorted(ladder) and len(set(ladder)) == len(ladder)
