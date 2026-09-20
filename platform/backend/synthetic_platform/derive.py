@@ -138,6 +138,9 @@ def evaluate(expr: Expr, frame: pd.DataFrame) -> pd.Series | object:
     if op == "duration_hours":
         start, end = _as_datetime(args[0]), _as_datetime(args[1])
         return (end - start).dt.total_seconds() / 3600.0
+    if op == "duration_seconds":
+        start, end = _as_datetime(args[0]), _as_datetime(args[1])
+        return (end - start).dt.total_seconds()
     if op == "time_of_day":
         moment = _as_datetime(args[0])
         shifted = moment + pd.Timedelta(hours=expr.tz_offset_hours)
@@ -150,6 +153,8 @@ def evaluate(expr: Expr, frame: pd.DataFrame) -> pd.Series | object:
         return _as_datetime(args[0]) + pd.to_timedelta(_numeric(args[1]), unit="D")
     if op == "add_hours":
         return _as_datetime(args[0]) + pd.to_timedelta(_numeric(args[1]), unit="h")
+    if op == "add_seconds":
+        return _as_datetime(args[0]) + pd.to_timedelta(_numeric(args[1]), unit="s")
 
     raise DerivationError(f"operator '{op}' is not implemented")
 

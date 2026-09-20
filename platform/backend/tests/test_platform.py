@@ -1168,3 +1168,205 @@ def test_timestamp_rebuild_works_from_a_categorical_weekday():
     assert rebuilt.notna().all()
     # Every rebuilt value lands inside the single anchor week.
     assert (rebuilt.max() - rebuilt.min()).total_seconds() / 86400 <= 7
+
+
+# --- related timestamps are rebuilt as a chain ------------------------------------
+
+
+def _call_log(n: int = 400) -> pd.DataFrame:
+    """A call and its IVR leg: three timestamps that must stay in order."""
+    rng = np.random.default_rng(3)
+    call = pd.Timestamp("2026-01-05", tz="UTC") + pd.to_timedelta(
+        rng.integers(0, 60 * 24 * 60, n), unit="min"
+    )
+    return pd.DataFrame(
+        {
+            "call_at": call,
+            "ivr_start": call + pd.to_timedelta(rng.integers(0, 90, n), unit="s"),
+            "ivr_end": call + pd.to_timedelta(rng.integers(90, 400, n), unit="s"),
+            "agent": rng.choice(list("abcd"), n),
+        }
+    )
+
+
+def _rewritten_call_log(frame: pd.DataFrame):
+    table, _ = profile_csv(frame, "calls")
+    caps = get_engine("arf").capabilities()
+    suggestions = suggest_for_table(table, caps, 0.0, frame)
+    return table, suggestions, apply_suggestions(table, suggestions)
+
+
+def test_related_timestamps_become_one_chained_suggestion():
+    frame = _call_log()
+    _, suggestions, _ = _rewritten_call_log(frame)
+
+    assert len(suggestions) == 1, "related timestamps must be rewritten as one unit"
+    assert suggestions[0].covers == ["call_at", "ivr_start", "ivr_end"]
+
+    added = {c.name for c in suggestions[0].adds}
+    # Only the anchor is reconstructed from calendar features.
+    assert {"call_at_hour", "call_at_weekday", "call_at_anchor"} <= added
+    assert "ivr_start_hour" not in added and "ivr_end_hour" not in added
+    # The followers are offsets.
+    assert {"ivr_start_gap_seconds", "ivr_end_gap_seconds"} <= added
+
+
+def test_each_offset_is_measured_from_its_predecessor_not_the_anchor():
+    """Chaining is what makes the ordering hold across the whole sequence.
+
+    Offsets taken from a common anchor are learned independently, so one row can
+    still receive a larger offset for the earlier event.
+    """
+    frame = _call_log()
+    _, _, rewritten = _rewritten_call_log(frame)
+
+    gap = rewritten.column("ivr_end_gap_seconds")
+    assert gap.source_expression.op == "duration_seconds"
+    assert gap.source_expression.args[0].col == "ivr_start"  # not call_at
+
+    rebuild = rewritten.column("ivr_end").formula
+    assert rebuild.op == "add_seconds"
+    assert rebuild.args[0].col == "ivr_start"
+
+
+def test_generated_timestamps_never_come_out_of_order():
+    """The property this whole rewrite exists to guarantee.
+
+    Regression: rebuilding each timestamp independently produced call logs whose
+    IVR leg began a day before the call itself.
+    """
+    frame = _call_log()
+    _, _, rewritten = _rewritten_call_log(frame)
+
+    spec = SyntheticDataSpec(
+        name="calls", mode=Mode.LEARNED_TABLE, purpose=Purpose.ML_DEVELOPMENT,
+        engine="independent", seed=7, tables=[rewritten],
+    )
+    result = run(spec, sources={"calls": frame}, rows=300)["frames"]["calls"]
+
+    call = pd.to_datetime(result["call_at"], utc=True)
+    start = pd.to_datetime(result["ivr_start"], utc=True)
+    end = pd.to_datetime(result["ivr_end"], utc=True)
+
+    assert (start >= call).all(), "IVR cannot start before the call"
+    assert (end >= start).all(), "IVR cannot end before it started"
+
+
+def test_offsets_are_clamped_non_negative_only_when_the_source_allows_it():
+    """Inventing an ordering the real data lacks would be its own overclaim."""
+    ordered = _call_log()
+    _, _, clean = _rewritten_call_log(ordered)
+    assert clean.column("ivr_start_gap_seconds").minimum == 0.0
+
+    # Now make the source genuinely inconsistent for some rows.
+    messy = ordered.copy()
+    messy.loc[messy.index[:40], "ivr_start"] = messy.loc[
+        messy.index[:40], "call_at"
+    ] - pd.Timedelta(seconds=30)
+    _, suggestions, rewritten = _rewritten_call_log(messy)
+
+    assert rewritten.column("ivr_start_gap_seconds").minimum < 0
+    assert "not guaranteed" in suggestions[0].rationale
+
+
+def test_unrelated_timestamps_are_not_chained_together():
+    """A hire date and a call date share no episode; linking them would invent one."""
+    rng = np.random.default_rng(5)
+    n = 300
+    call = pd.Timestamp("2026-06-01", tz="UTC") + pd.to_timedelta(
+        rng.integers(0, 30 * 24 * 60, n), unit="min"
+    )
+    frame = pd.DataFrame(
+        {
+            "call_at": call,
+            "ivr_start": call + pd.to_timedelta(rng.integers(0, 90, n), unit="s"),
+            # Years earlier and unrelated to any individual call.
+            "hired_on": pd.Timestamp("2015-01-01", tz="UTC")
+            + pd.to_timedelta(rng.integers(0, 3000, n), unit="D"),
+            "agent": rng.choice(list("abc"), n),
+        }
+    )
+    table, _ = profile_csv(frame, "calls")
+    suggestions = suggest_for_table(table, get_engine("arf").capabilities(), 0.0, frame)
+
+    groups = [set(s.covers) for s in suggestions]
+    assert {"call_at", "ivr_start"} in groups
+    assert {"hired_on"} in groups
+
+
+def test_chain_order_uses_row_wise_comparison_not_column_medians():
+    """Regression: column medians reversed the attendance clock-in and clock-out.
+
+    Over a long span, a few hours between two columns' medians is noise; row by row
+    the clock-out is later every time.
+    """
+    rng = np.random.default_rng(11)
+    n = 600
+    day = pd.Timestamp("2023-05-01", tz="UTC") + pd.to_timedelta(
+        rng.integers(0, 700, n), unit="D"
+    )
+    frame = pd.DataFrame(
+        {
+            "clock_in": day + pd.to_timedelta(rng.integers(5 * 60, 7 * 60, n), unit="min"),
+            "clock_out": day + pd.to_timedelta(rng.integers(15 * 60, 19 * 60, n), unit="min"),
+            "staff": rng.choice(list("abcde"), n),
+        }
+    )
+    table, _ = profile_csv(frame, "shifts")
+    suggestions = suggest_for_table(table, get_engine("arf").capabilities(), 0.0, frame)
+
+    assert suggestions[0].covers == ["clock_in", "clock_out"]
+    assert suggestions[0].column == "clock_in"
+    assert suggestions[0].rewrites["clock_out"][1].args[0].col == "clock_in"
+
+
+def test_grouping_is_scale_free_not_threshold_based():
+    """Two timestamps group when the gap varies little next to the columns themselves.
+
+    Regression: an earlier version asked whether the gap was under 5% of the data's
+    span. A delivery that always follows its order by about ten days was split from
+    that order purely because the file covered ninety days, and 324 of 400 generated
+    rows then came out in the wrong sequence.
+    """
+    rng = np.random.default_rng(9)
+    n = 800
+    ordered = pd.Timestamp("2026-02-02", tz="UTC") + pd.to_timedelta(
+        rng.integers(0, 90 * 24 * 60, n), unit="min"
+    )
+    frame = pd.DataFrame(
+        {
+            "ordered_at": ordered,
+            "shipped_at": ordered + pd.to_timedelta(rng.integers(3600, 5 * 86400, n), unit="s"),
+            "delivered_at": ordered + pd.to_timedelta(rng.integers(6 * 86400, 14 * 86400, n), unit="s"),
+            "channel": rng.choice(["web", "app"], n),
+        }
+    )
+    table, _ = profile_csv(frame, "orders")
+    suggestions = suggest_for_table(table, get_engine("arf").capabilities(), 0.0, frame)
+
+    assert len(suggestions) == 1
+    assert suggestions[0].covers == ["ordered_at", "shipped_at", "delivered_at"]
+
+
+def test_an_independent_date_never_joins_an_episode():
+    """A date of birth moves as much as its own column; it belongs to no episode."""
+    rng = np.random.default_rng(9)
+    n = 800
+    applied = pd.Timestamp("2026-01-10", tz="UTC") + pd.to_timedelta(
+        rng.integers(0, 60 * 24 * 60, n), unit="min"
+    )
+    frame = pd.DataFrame(
+        {
+            "applied_at": applied,
+            "decided_at": applied + pd.to_timedelta(rng.integers(1800, 7 * 86400, n), unit="s"),
+            "born_on": pd.Timestamp("1960-01-01", tz="UTC")
+            + pd.to_timedelta(rng.integers(0, 20000, n), unit="D"),
+            "amount": rng.integers(500, 50000, n),
+        }
+    )
+    table, _ = profile_csv(frame, "loans")
+    suggestions = suggest_for_table(table, get_engine("arf").capabilities(), 0.0, frame)
+
+    groups = [set(s.covers) for s in suggestions]
+    assert {"applied_at", "decided_at"} in groups
+    assert {"born_on"} in groups

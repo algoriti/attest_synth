@@ -39,22 +39,28 @@ TEMPORAL_TYPES = {ColumnType.TIMESTAMP, ColumnType.DATE}
 class Suggestion:
     """One proposed change to a specification, in a form the UI can show and apply."""
 
-    column: str
+    column: str  # the column this suggestion is keyed on; the anchor of a group
     kind: str
     title: str
     rationale: str
     adds: list[Column] = field(default_factory=list)
-    replaces_role: SemanticRole | None = None
-    replaces_formula: Expr | None = None
+    #: name -> (role, formula) for every column this suggestion rewrites. A group of
+    #: related timestamps is rewritten together or not at all, because the followers
+    #: are expressed as offsets from the anchor and are meaningless without it.
+    rewrites: dict[str, tuple[SemanticRole, Expr]] = field(default_factory=dict)
+
+    @property
+    def covers(self) -> list[str]:
+        return list(self.rewrites)
 
     def as_dict(self) -> dict:
         return {
             "column": self.column,
+            "covers": self.covers,
             "kind": self.kind,
             "title": self.title,
             "rationale": self.rationale,
             "adds": [c.model_dump(mode="json") for c in self.adds],
-            "replaces_role": self.replaces_role.value if self.replaces_role else None,
             "confirmed": False,
             "origin": Origin.ASSISTANT_PROPOSED.value,
         }
@@ -80,42 +86,162 @@ def suggest_for_table(
     existing = {c.name for c in table.columns}
     suggestions: list[Suggestion] = []
 
-    for column in table.columns:
-        if column.role not in modelled or column.type.value in supported:
-            continue
-        if column.type in TEMPORAL_TYPES:
-            suggestion = _temporal_rewrite(
-                column, supported, existing, tz_offset_hours, frame
-            )
-            if suggestion is not None:
-                existing.update(c.name for c in suggestion.adds)
-                suggestions.append(suggestion)
+    unsupported_temporal = [
+        c for c in table.columns
+        if c.role in modelled
+        and c.type.value not in supported
+        and c.type in TEMPORAL_TYPES
+    ]
+
+    # Related timestamps are rewritten as one unit. Rebuilding each independently
+    # loses the ordering between them: a call log came back with the IVR leg starting
+    # a day before its own call. Only the anchor is reconstructed from calendar
+    # features; the rest become offsets from it, so the ordering holds by construction.
+    for group in _temporal_groups(unsupported_temporal, frame):
+        suggestion = _temporal_group_rewrite(
+            group, supported, existing, tz_offset_hours, frame
+        )
+        if suggestion is not None:
+            existing.update(c.name for c in suggestion.adds)
+            suggestions.append(suggestion)
 
     return suggestions
 
 
-def _temporal_rewrite(
-    column: Column,
+def _temporal_groups(columns: list[Column], frame) -> list[list[Column]]:
+    """Cluster temporal columns that describe the same episode, anchor first.
+
+    Two timestamps belong together when their typical separation is small relative to
+    the span of the data: a call and its IVR leg, a clock-in and its clock-out. A hire
+    date and a call date do not, and forcing an offset between them would invent a
+    relationship nobody claimed.
+
+    Without a source frame there is nothing to measure, so every column stands alone
+    and behaves exactly as it did before grouping existed.
+    """
+    if frame is None or len(columns) < 2:
+        return [[c] for c in columns]
+
+    import numpy as np
+    import pandas as pd
+
+    stamps: dict[str, pd.Series] = {}
+    for column in columns:
+        if column.name not in frame.columns:
+            continue
+        parsed = pd.to_datetime(frame[column.name], format="mixed", utc=True, errors="coerce")
+        if parsed.notna().any():
+            stamps[column.name] = parsed
+
+    named = [c for c in columns if c.name in stamps]
+    if len(named) < 2:
+        return [[c] for c in columns]
+
+    # Two timestamps describe the same episode when the *variation* in the gap between
+    # them is small next to the variation in the timestamps themselves. A delivery
+    # always follows its order by days, while orders spread over months, so the gap
+    # barely moves by comparison. A date of birth against an application date moves as
+    # much as the column does, because the two are independent quantities.
+    #
+    # This is scale-free, which a magnitude threshold is not: an earlier version asked
+    # whether the gap was under 5% of the data's span, and split a 10-day delivery away
+    # from its own order because the file happened to cover 90 days.
+    def spread(values) -> float:
+        series = pd.Series(values).dropna()
+        if len(series) < 4:
+            return float("nan")
+        return float(series.quantile(0.75) - series.quantile(0.25))
+
+    epoch = {name: stamps[name].astype("int64") / 1e9 for name in stamps}
+
+    parent = {c.name: c.name for c in named}
+
+    def find(x: str) -> str:
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    for i, a in enumerate(named):
+        for b in named[i + 1:]:
+            gap_spread = spread(epoch[b.name] - epoch[a.name])
+            column_spread = min(spread(epoch[a.name]), spread(epoch[b.name]))
+            if not (np.isfinite(gap_spread) and np.isfinite(column_spread)):
+                continue
+            if column_spread <= 0:
+                # Every row shares one timestamp; fall back to whether the gap is
+                # steady rather than comparing it to a spread of zero.
+                same_episode = gap_spread <= 0
+            else:
+                same_episode = gap_spread <= column_spread
+            if same_episode:
+                parent[find(b.name)] = find(a.name)
+
+    clusters: dict[str, list[Column]] = {}
+    for column in named:
+        clusters.setdefault(find(column.name), []).append(column)
+
+    groups = [_anchor_first(members, stamps) for members in clusters.values()]
+    groups.extend([c] for c in columns if c.name not in stamps)
+    return groups
+
+
+def _anchor_first(members: list[Column], stamps) -> list[Column]:
+    """Order a whole group in time, earliest first.
+
+    The first column becomes the anchor and each later one is expressed as an offset
+    from the column immediately before it. Ordering the entire chain matters, not just
+    the anchor: offsets taken from a common anchor are learned independently, so one
+    row can still receive a larger offset for the earlier event. Chaining removes that
+    possibility, because each step forward is its own non-negative quantity.
+    """
+    if len(members) == 1:
+        return members
+
+    # Order by how often each column precedes the others *within the same row*, not by
+    # each column's own median. Over a two-year attendance export the column medians
+    # put the clock-out half a day before the clock-in, because a few hours of
+    # difference is noise next to the span; row by row, the clock-out is later every
+    # single time.
+    def precedes_others(column: Column) -> float:
+        score = 0.0
+        for other in members:
+            if other.name == column.name:
+                continue
+            delta = (stamps[other.name] - stamps[column.name]).dt.total_seconds()
+            comparable = delta.notna()
+            if comparable.any():
+                score += float((delta[comparable] >= 0).mean())
+        return score
+
+    return sorted(members, key=lambda c: (-precedes_others(c), c.name))
+
+
+def _temporal_group_rewrite(
+    group: list[Column],
     supported: set[str],
     existing: set[str],
     tz_offset_hours: float,
     frame=None,
 ) -> Suggestion | None:
-    """Split a timestamp into learnable parts and rebuild it from them."""
+    """Rebuild a group of related timestamps from one anchor plus offsets."""
     if ColumnType.NUMBER.value not in supported:
         return None  # the engine cannot hold the extracted features either
 
-    base = column.name
+    anchor_column, followers = group[0], group[1:]
+    base = anchor_column.name
     anchor_value = _anchor_for(base, frame, tz_offset_hours)
+
     # A date carries no time of day: every value sits at midnight, so an extracted hour
     # would be a constant. A generator handed a zero-variance column does not merely
     # learn nothing from it — arfpy fails outright, fitting a truncated normal with a
     # scale of zero. Only a timestamp gets an hour.
-    with_hour = column.type == ColumnType.TIMESTAMP
+    with_hour = anchor_column.type == ColumnType.TIMESTAMP
 
     weekday_name = _unique(f"{base}_weekday", existing)
-    anchor_name = _unique(f"{base}_anchor", existing)
+    reference_name = _unique(f"{base}_anchor", existing)
     hour_name = _unique(f"{base}_hour", existing) if with_hour else None
+    existing = existing | {weekday_name, reference_name} | ({hour_name} if with_hour else set())
 
     adds = [
         Column(
@@ -137,8 +263,8 @@ def _temporal_rewrite(
             ),
         ),
         Column(
-            name=anchor_name,
-            type=column.type,
+            name=reference_name,
+            type=anchor_column.type,
             role=SemanticRole.CONSTANT,
             constant_value=anchor_value,
             description=f"week beginning {anchor_value}, used to rebuild '{base}'",
@@ -175,29 +301,121 @@ def _temporal_rewrite(
 
     # Every extracted feature is put back. Learning one and then discarding it at
     # reconstruction would make the model's effort invisible.
-    place_day = {"op": "add_days", "args": [{"col": anchor_name}, {"col": weekday_name}]}
-    rebuild = Expr.model_validate(
+    place_day = {"op": "add_days", "args": [{"col": reference_name}, {"col": weekday_name}]}
+    anchor_rebuild = Expr.model_validate(
         {"op": "add_hours", "args": [place_day, {"op": "sub", "args": [{"col": hour_name}, {"const": tz_offset_hours}]}]}
         if with_hour
         else place_day
     )
 
+    rewrites: dict[str, tuple[SemanticRole, Expr]] = {
+        base: (SemanticRole.DERIVED, anchor_rebuild)
+    }
+
+    ordering_guaranteed = True
+    unordered: list[str] = []
+
+    previous = base
+    for follower in followers:
+        gap_name = _unique(f"{follower.name}_gap_seconds", existing)
+        existing = existing | {gap_name}
+        low, high, nullable, non_negative = _gap_bounds(previous, follower.name, frame)
+        ordering_guaranteed &= non_negative
+        if not non_negative:
+            unordered.append(follower.name)
+
+        adds.append(
+            Column(
+                name=gap_name,
+                type=ColumnType.NUMBER,
+                role=SemanticRole.LEARNED,
+                minimum=low,
+                maximum=high,
+                nullable=nullable,
+                description=f"seconds from '{previous}' to '{follower.name}'",
+                source_expression=Expr.model_validate(
+                    {"op": "duration_seconds", "args": [{"col": previous}, {"col": follower.name}]}
+                ),
+                provenance=_proposed(
+                    f"'{follower.name}' is modelled as an offset from '{previous}' so the "
+                    "two cannot be reconstructed out of order"
+                ),
+            )
+        )
+        rewrites[follower.name] = (
+            SemanticRole.DERIVED,
+            Expr.model_validate(
+                {"op": "add_seconds", "args": [{"col": previous}, {"col": gap_name}]}
+            ),
+        )
+        previous = follower.name
+
     kept = "time of day and day of week" if with_hour else "day of week"
-    return Suggestion(
-        column=base,
-        kind="temporal_features",
-        title=f"Model '{base}' as time features",
-        rationale=(
-            f"'{base}' is a {column.type.value}, which this engine cannot model. Its "
+    if followers:
+        names = ", ".join(f"'{f.name}'" for f in followers)
+        ordering = (
+            f" Each offset is non-negative and measured from the timestamp before it, so "
+            f"the whole sequence — '{base}', then {names} — can never come out of order."
+            if ordering_guaranteed
+            else (
+                f" The source itself has {', '.join(unordered)} occurring before "
+                f"'{base}' in some rows, so the offsets are allowed to be negative and "
+                "the ordering is not guaranteed."
+            )
+        )
+        title = f"Model '{base}' and {len(followers)} related timestamp(s) as time features"
+        rationale = (
+            f"'{base}' is a {anchor_column.type.value}, which this engine cannot model. "
+            f"Its {kept} can be learned as ordinary numbers, and '{base}' is rebuilt from "
+            f"them. {names} are modelled as elapsed seconds from '{base}' rather than "
+            f"independently, then rebuilt by adding that offset back.{ordering} Rebuilt "
+            f"values fall inside a single reference week, so use them for working-pattern "
+            f"behaviour rather than as real calendar dates."
+        )
+    else:
+        title = f"Model '{base}' as time features"
+        rationale = (
+            f"'{base}' is a {anchor_column.type.value}, which this engine cannot model. Its "
             f"{kept} can be learned as ordinary numbers, and '{base}' is then rebuilt "
             f"from them. The rebuilt column keeps {kept} but falls inside a single "
             f"reference week, so use it for working-pattern behaviour rather than as a "
             f"real calendar date."
-        ),
+        )
+
+    return Suggestion(
+        column=base,
+        kind="temporal_features",
+        title=title,
+        rationale=rationale,
         adds=adds,
-        replaces_role=SemanticRole.DERIVED,
-        replaces_formula=rebuild,
+        rewrites=rewrites,
     )
+
+
+def _gap_bounds(anchor: str, follower: str, frame) -> tuple[float | None, float | None, bool, bool]:
+    """Observed bounds for the gap between two timestamps.
+
+    Returns (minimum, maximum, nullable, non_negative). Clamping the minimum at zero is
+    what makes the ordering hold — but only where the source supports it. If the real
+    data has the follower occurring first in some rows, that is a fact about the data,
+    and inventing an ordering it does not have would be the same overclaiming this
+    platform exists to avoid.
+    """
+    if frame is None or anchor not in getattr(frame, "columns", []) or follower not in frame.columns:
+        return 0.0, None, True, True
+
+    import pandas as pd
+
+    a = pd.to_datetime(frame[anchor], format="mixed", utc=True, errors="coerce")
+    b = pd.to_datetime(frame[follower], format="mixed", utc=True, errors="coerce")
+    gap = (b - a).dt.total_seconds()
+    observed = gap.dropna()
+    if observed.empty:
+        return 0.0, None, True, True
+
+    low, high = float(observed.min()), float(observed.max())
+    non_negative = low >= 0
+    return (0.0 if non_negative else low), high, bool(gap.isna().any()), non_negative
 
 
 def _anchor_for(column_name: str, frame, tz_offset_hours: float = 0) -> str:
@@ -235,28 +453,30 @@ def apply_suggestions(
     """Apply the named suggestions to a copy of the table.
 
     `accept` names the columns whose suggestions are being taken; passing None accepts
-    all of them. The caller decides — this module never applies anything on its own.
+    all of them. Naming any column of a group accepts the whole group: the followers
+    are offsets from the anchor and mean nothing without it. The caller decides — this
+    module never applies anything on its own.
     """
     result = table.model_copy(deep=True)
 
     for suggestion in suggestions:
-        if accept is not None and suggestion.column not in accept:
-            continue
-        target = result.column(suggestion.column)
-        if target is None:
+        if accept is not None and not (accept & {suggestion.column, *suggestion.covers}):
             continue
 
         for addition in suggestion.adds:
             if result.column(addition.name) is None:
                 result.columns.append(addition.model_copy(deep=True))
 
-        if suggestion.replaces_role is not None:
-            target.role = suggestion.replaces_role
-        if suggestion.replaces_formula is not None:
-            target.formula = suggestion.replaces_formula
-        target.provenance = _proposed(
-            f"rewritten by the '{suggestion.kind}' suggestion; confirm before relying on it"
-        )
+        for name, (role, formula) in suggestion.rewrites.items():
+            target = result.column(name)
+            if target is None:
+                continue
+            target.role = role
+            target.formula = formula
+            target.provenance = _proposed(
+                f"rewritten by the '{suggestion.kind}' suggestion; confirm before "
+                "relying on it"
+            )
 
     return _ordered(result)
 

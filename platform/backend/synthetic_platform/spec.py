@@ -124,11 +124,13 @@ EXPR_OPS: dict[str, int | None] = {
     "coalesce": None,
     # temporal
     "duration_hours": 2,  # (start, end) -> float hours
+    "duration_seconds": 2,  # (start, end) -> float seconds
     "time_of_day": 1,  # timestamp -> float hours since local midnight
     "date_of": 1,  # timestamp -> date
     "day_of_week": 1,  # timestamp -> 0=Monday .. 6=Sunday
     "add_days": 2,
     "add_hours": 2,
+    "add_seconds": 2,
 }
 
 
