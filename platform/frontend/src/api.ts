@@ -27,6 +27,9 @@ export interface ProfileNote {
   message: string;
   applied?: boolean;
   agreement?: number;
+  match_count?: number;
+  eligible_rows?: number;
+  exceptions?: number;
 }
 
 export interface ProfileReport {
@@ -83,6 +86,7 @@ export interface SpecTable {
   name: string;
   rows?: number | null;
   primary_key?: string | null;
+  unique_keys?: string[][];
   columns: SpecColumn[];
   constraints: SpecConstraint[];
   source: { kind: string; reference?: string | null };
@@ -105,7 +109,7 @@ export interface Spec {
     release_claim_permitted: boolean;
     notes?: string;
   };
-  evaluation: { checks: string[]; target?: string | null; task?: string | null };
+  evaluation: { checks: string[]; target?: string | null; task?: string | null; split?: string; split_column?: string | null };
 }
 
 export interface Relationship {
@@ -115,6 +119,7 @@ export interface Relationship {
   child_key: string;
   cardinality: string;
   optional?: boolean;
+  null_fraction?: number;
   child_count_min?: number | null;
   child_count_max?: number | null;
 }
@@ -194,6 +199,9 @@ export interface EvidenceReport {
   };
   tables: TableReport[];
   evaluation: {
+    checks?: Record<string, {status: string; reason?: string}>;
+    relationship_checks?: {relationship: string; passed: boolean; invalid_keys: number; parents_outside_bounds: number}[];
+    split?: {strategy: string; train_rows: number; test_rows: number; note: string};
     fidelity?: {
       numeric_ks: Record<string, number>;
       categorical_tv: Record<string, number>;
@@ -204,6 +212,7 @@ export interface EvidenceReport {
       interpretation: string;
     };
     predictive_utility?: {
+      error?: string;
       target: string;
       task: string;
       metric: string;
@@ -263,6 +272,8 @@ async function json<T>(response: Response): Promise<T> {
 }
 
 export const api = {
+  assistantConfig: () => fetch(`${BASE}/api/assistant/config`).then(json<{configured:boolean;model:string;data_policy:string}>),
+  propose: (prompt:string) => fetch(`${BASE}/api/assistant`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})}).then(json<{spec:Spec;notice:string}>),
   health: () => fetch(`${BASE}/api/health`).then(json<{ status: string; version: string }>),
 
   engines: () => fetch(`${BASE}/api/engines`).then(json<{ engines: Engine[] }>),

@@ -5,6 +5,7 @@
  * a third of its distributions were invented, or that its utility barely beats random
  * sampling. Everything that qualifies the data is shown before the download link.
  */
+import { useState } from "react";
 import {
   Bar,
   BarChart,
@@ -31,6 +32,7 @@ export function ReportView({
   onRestart: () => void;
 }) {
   const { summary, evaluation } = report;
+  const [activeTable,setActiveTable]=useState(report.tables[0]?.table??'');
   const warnings = report.validation.warnings ?? [];
 
   return (
@@ -39,7 +41,7 @@ export function ReportView({
         <div className="row">
           <h1>Evidence report</h1>
           <Badge tone={summary.all_constraints_passed ? "good" : "critical"}>
-            {summary.all_constraints_passed ? "All constraints passed" : "Constraints failed"}
+            {summary.all_constraints_passed ? "Structural checks passed" : "Output checks failed"}
           </Badge>
         </div>
         <p>
@@ -81,7 +83,13 @@ export function ReportView({
         </Card>
       ) : null}
 
-      {report.tables.map((table) => (
+      <Card title="Checks and results" sub="Structural validity, similarity and usefulness answer different questions.">
+        {evaluation.checks&&<div className="row">{Object.entries(evaluation.checks).map(([name,result])=><div key={name}><strong>{name.replaceAll('_',' ')}</strong> <Badge tone={result.status==='failed'?'critical':result.status==='skipped'?'warning':'good'}>{result.status}</Badge>{result.reason&&<p className="small">{result.reason}</p>}</div>)}</div>}
+        {evaluation.relationship_checks?.filter(c=>!c.passed).map(c=><Notice key={c.relationship} tone="critical">{c.relationship}: {c.invalid_keys} invalid keys; {c.parents_outside_bounds} parents outside their child-count limits.</Notice>)}
+        {evaluation.split&&<Notice tone="accent" title="Utility evaluation split">{evaluation.split.strategy}: {evaluation.split.train_rows} training rows; {evaluation.split.test_rows} test rows. {evaluation.split.note}</Notice>}
+      </Card>
+      <nav className="row" aria-label="Result tables" style={{marginBottom:16}}>{report.tables.map(t=><button key={t.table} aria-pressed={activeTable===t.table} onClick={()=>setActiveTable(t.table)}>{t.table} ({t.generated_rows.toLocaleString()})</button>)}<button aria-pressed={activeTable==='*'} onClick={()=>setActiveTable('*')}>Show all tables</button></nav>
+      {report.tables.filter(t=>activeTable==='*'||activeTable===t.table).map((table) => (
         <Card
           key={table.table}
           title={table.table}
@@ -172,7 +180,7 @@ export function ReportView({
               </div>
               <p className="small muted" style={{ marginTop: 8 }}>
                 These columns were calculated from the specification's formulas after generation, so
-                they cannot contradict the columns they depend on.
+                their formulas and declared bounds are checked before export.
               </p>
             </div>
           ) : null}
@@ -332,6 +340,7 @@ function UtilityPanel({
 }) {
   const c = useChartColors();
   const metric = utility.metric;
+  if (utility.error) return <Card title="Utility evaluation could not complete"><Notice tone="warning">{utility.error}</Notice></Card>;
   const higherIsBetter = utility.better === "higher";
 
   const data = [
@@ -520,7 +529,7 @@ function RelationalPanel({
     <Card title="Relational integrity" sub={`${integrity.length} relationships`}>
       <Notice tone={allValid ? "good" : "critical"}>
         {allValid
-          ? "Every foreign key resolves to a parent that exists. Parent-first generation makes an orphan row unrepresentable rather than merely unlikely."
+          ? "All non-null foreign keys resolve to existing parents. Required links and cardinality are checked separately above."
           : "Some child rows reference a parent that does not exist."}
       </Notice>
 

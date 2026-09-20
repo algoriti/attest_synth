@@ -9,3 +9,10 @@ node_modules/
 storage/
 platform/backend/demo_output/
 platform/frontend/dist/
+
+# Local platform credentials and artifacts
+.env
+.env.*
+!.env.example
+platform/backend/storage/
+platform/frontend/dist/

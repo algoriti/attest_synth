@@ -367,3 +367,15 @@ details.raw pre {
   .steps .step span:not(.step-num) { display: none; }
   .topbar { gap: 8px; padding: 0 14px; }
 }
+
+/* Dataset authoring: labelled controls and visible focus for keyboard users. */
+.editor-fields { margin: 12px 0; }
+.editor-fields label { display:flex; flex-direction:column; gap:6px; min-width:0; font-size:13px; }
+.editor-fields input,.editor-fields select { width:100%; min-width:0; }
+.editor-table { margin:20px 0; padding:16px; border:1px solid var(--border); border-radius:var(--radius); min-width:0; }
+.editor-table legend { padding:0 8px; font-weight:600; }
+.column-editor { padding:12px; margin:12px 0; background:var(--surface-2); border-radius:var(--radius-sm); }
+.json-editor { width:100%; box-sizing:border-box; font-family:var(--mono); background:var(--surface-2); color:var(--text-primary); border:1px solid var(--border); padding:12px; }
+.import-button { font-size:13px; display:flex; flex-direction:column; gap:6px; }
+:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+@media (max-width:720px) { .editor-fields {grid-template-columns:1fr;} .editor-table {padding:10px;} }

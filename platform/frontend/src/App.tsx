@@ -15,6 +15,7 @@ import {
 import { Badge, Card, DataPreview, FindingList, Notice, RoleChip, Spinner } from "./components";
 import { ReportView } from "./ReportView";
 import "./theme.css";
+import { SpecEditor, blankSpec } from "./SpecEditor";
 
 type Step = "start" | "review" | "generate" | "report";
 
@@ -176,6 +177,10 @@ function StartView({
 }) {
   const [examples, setExamples] = useState<{ id: string; name: string; description: string; mode: string; spec: Spec }[]>([]);
   const [busy, setBusy] = useState(false);
+  const [assistantReady,setAssistantReady]=useState(false);
+  const [prompt,setPrompt]=useState('');
+  const [proposing,setProposing]=useState(false);
+  useEffect(()=>{api.assistantConfig().then(c=>setAssistantReady(c.configured)).catch(()=>setAssistantReady(false));},[]);
   const [dragging, setDragging] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -280,8 +285,12 @@ function StartView({
         </Card>
 
         <Card title="Start from a schema" sub="No source records needed">
+          <div className="row" style={{marginBottom:16}}>
+            <button className="primary" onClick={()=>{onProfile(null,null);onReady(blankSpec());}}>Create your own dataset</button>
+            <label className="import-button">Import specification JSON<input aria-label="Import specification JSON" type="file" accept=".json" onChange={async e=>{const file=e.target.files?.[0];if(!file)return;try{const spec=JSON.parse(await file.text());const result=await api.validate(spec);if(!result.ok)throw new Error(result.findings.map(f=>f.message).join(' '));onProfile(null,null);onReady(spec);}catch(exc){onError(String(exc));}e.target.value='';}}/></label>
+          </div>
           <p className="small secondary">
-            Every distribution is one you declare, so there is no disclosure risk — and equally, a
+            Every distribution is one you declare. Avoid including real identifying values. A
             model trained on the result has learned your assumptions rather than a fact about any
             population.
           </p>
@@ -309,6 +318,12 @@ function StartView({
         </Card>
       </div>
 
+      <Card title="Describe the dataset you need" sub="Optional hosted assistant — creates a proposal for you to review">
+        <label className="stack">Your scenario<textarea rows={3} maxLength={4000} value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder="For example: 30 customers, each with 1 to 4 orders, with totals calculated from quantity and price."/></label>
+        <p className="small secondary">Only these instructions and the specification format are sent to the hosted provider. Uploaded records are not included. Do not enter real personal records here.</p>
+        {!assistantReady&&<Notice tone="neutral">The hosted assistant is not configured yet. You can use the guided editor and examples now.</Notice>}
+        <button className="primary" disabled={!assistantReady||proposing||prompt.trim().length<10} onClick={async()=>{setProposing(true);try{const result=await api.propose(prompt);onProfile(null,null);onReady(result.spec);}catch(exc){onError(String(exc));}finally{setProposing(false);}}}>{proposing?'Preparing your proposal…':'Propose a dataset'}</button>
+      </Card>
       <Card title="Registered engines" sub="Capabilities are declared, not assumed">
         <div className="table-wrap">
           <table>
@@ -375,7 +390,10 @@ function ReviewView({
   onError: (message: string) => void;
 }) {
   const [rows, setRows] = useState<number>(spec.tables[0]?.rows ?? 1000);
+  useEffect(()=>setRows(spec.tables[0]?.rows??1000),[spec.tables[0]?.rows]);
   const [starting, setStarting] = useState(false);
+  const [editorDirty,setEditorDirty]=useState(false);
+  const [showEditor,setShowEditor]=useState(false);
   const [tzOffset, setTzOffset] = useState(0);
   const [reprofiling, setReprofiling] = useState(false);
   const [fixes, setFixes] = useState<FixSuggestion[]>([]);
@@ -423,6 +441,7 @@ function ReviewView({
   // the same attendance cutoff reads as 07:45 at UTC+3 and 04:45 at UTC.
   const reprofile = async (offset: number) => {
     if (!uploadId) return;
+    if (!window.confirm("Changing timezone reprofiles the upload and replaces column edits and rule decisions. Continue?")) return;
     setTzOffset(offset);
     setReprofiling(true);
     try {
@@ -445,7 +464,7 @@ function ReviewView({
   const qualityNotes = profile?.quality ?? [];
   const errors = validation?.findings.filter((f) => f.severity === "error") ?? [];
   const warnings = validation?.findings.filter((f) => f.severity === "warning") ?? [];
-  const blocked = errors.length > 0;
+  const blocked = !validation?.ok || errors.length > 0 || editorDirty;
 
   const setEngine = (engine: string) => {
     const next = { ...spec, engine };
@@ -466,13 +485,13 @@ function ReviewView({
   };
 
   const usable = engines.filter((engine) =>
-    spec.relationships.length ? engine.multi_table : true,
+    (spec.tables.length>1 || spec.relationships.length ? engine.multi_table : engine.single_table) && (spec.mode==='learned_table'?engine.learns_from_records:engine.schema_only),
   );
 
   // A derived column is predictable from its own formula, so it measures the formula
   // rather than the synthesis. It stays selectable but is labelled as such.
   const utilityTargets = (spec.tables[0]?.columns ?? []).filter(
-    (column) => !["identifier", "empty", "constant"].includes(column.role),
+    (column) => !["identifier", "empty", "constant", "derived"].includes(column.role) && !["date","timestamp"].includes(column.type),
   );
 
   return (
@@ -485,9 +504,11 @@ function ReviewView({
         </p>
       </div>
 
+      <div className="row" style={{marginBottom:16}}><button onClick={()=>setShowEditor(!showEditor)} aria-expanded={showEditor}>{showEditor?'Hide dataset editor':'Edit tables, columns and relationships'}</button><span className="small secondary">Use guided controls or advanced JSON. Apply changes before generation.</span></div>
+      {showEditor&&<SpecEditor key={JSON.stringify(spec)} spec={spec} onApply={onValidate} onDirty={setEditorDirty}/>}
       {derivedNotes.length > 0 ? (
         <Card
-          title="Business rules found in your data"
+          title="Possible rules to review"
           sub="Proposed as computed columns"
           actions={
             uploadId ? (
@@ -509,10 +530,10 @@ function ReviewView({
             ) : undefined
           }
         >
-          <Notice tone="accent" title="These columns are formulas, not behaviour">
+          <Notice tone="accent" title="Statistical matches need your decision">
             Left as ordinary columns, a generator reproduces their frequency while contradicting the
             columns they are computed from — a six-hour shift stamped with nine hours of overtime.
-            Marked as derived, they are calculated after generation and cannot disagree.
+            Accept a formula only when it represents the scenario or policy you intend. Its exceptions may be meaningful.
           </Notice>
           <div className="table-wrap">
             <table>
@@ -520,7 +541,7 @@ function ReviewView({
                 <tr>
                   <th>Column</th>
                   <th>Rule</th>
-                  <th className="num">Match</th>
+                  <th className="num">Match</th><th>Decision</th>
                 </tr>
               </thead>
               <tbody>
@@ -530,9 +551,10 @@ function ReviewView({
                     <td className="small secondary">{note.message.split(" (")[0]}</td>
                     <td className="num">
                       <Badge tone={(note.agreement ?? 0) >= 0.99 ? "good" : "warning"}>
-                        {((note.agreement ?? 0) * 100).toFixed(1)}%
+                        {((note.agreement ?? 0) * 100).toFixed(1)}%{note.eligible_rows!==undefined?` (${note.match_count}/${note.eligible_rows})`:""}
                       </Badge>
                     </td>
+                    <td><div className="row"><button onClick={()=>{const next=structuredClone(spec);const c=next.tables[0].columns.find(c=>c.name===note.column);if(c){c.provenance={origin:'user',detail:'Accepted as a scenario rule by the user',confirmed:true};void onValidate(next);}}}>Accept rule</button><button onClick={()=>{const next=structuredClone(spec);const c=next.tables[0].columns.find(c=>c.name===note.column);if(c){c.role='learned';delete c.formula;c.provenance={origin:'profiled',detail:'Candidate formula rejected; learn observed values',confirmed:false};void onValidate(next);}}}>Learn instead</button></div><span className="small">{spec.tables[0].columns.find(c=>c.name===note.column)?.role==='learned'?'Rejected':spec.tables[0].columns.find(c=>c.name===note.column)?.provenance?.confirmed?'Accepted':'Unconfirmed'}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -671,7 +693,7 @@ function ReviewView({
       ))}
 
       {spec.relationships.length > 0 ? (
-        <Card title="Relationships" sub="Generated parent-first, so orphans are impossible">
+        <Card title="Relationships" sub="Keys and child counts are checked after generation">
           <div className="table-wrap">
             <table>
               <thead>
@@ -693,7 +715,7 @@ function ReviewView({
                     </td>
                     <td className="small secondary">{rel.cardinality.replace(/_/g, " ")}</td>
                     <td className="num">
-                      {rel.child_count_min ?? 1}–{rel.child_count_max ?? 5}
+                      {rel.child_count_min ?? 0}–{rel.child_count_max ?? "not specified"}
                     </td>
                   </tr>
                 ))}
@@ -762,6 +784,7 @@ function ReviewView({
                 const next: Spec = {
                   ...spec,
                   evaluation: {
+                    ...spec.evaluation,
                     checks: [...checks],
                     target,
                     task: column && ["category", "boolean"].includes(column.type)
@@ -788,6 +811,10 @@ function ReviewView({
           </label>
         ) : null}
 
+        {spec.evaluation.target&&<div className="grid grid-2 editor-fields">
+          <label>How should real test records be held out?<select value={spec.evaluation.split??'random'} onChange={e=>void onValidate({...spec,evaluation:{...spec.evaluation,split:e.target.value}})}><option value="random">Random records</option><option value="group">Entire entities (such as employees)</option><option value="time">Latest records</option></select></label>
+          {spec.evaluation.split&&spec.evaluation.split!=='random'&&<label>Split column<select value={spec.evaluation.split_column??''} onChange={e=>void onValidate({...spec,evaluation:{...spec.evaluation,split_column:e.target.value}})}><option value="">Choose a column</option>{spec.tables[0].columns.map(c=><option key={c.name}>{c.name}</option>)}</select></label>}
+        </div>}
         <div className="row">
           <button className="primary" disabled={blocked || starting} onClick={start}>
             {starting ? "Starting…" : "Generate dataset"}
@@ -833,8 +860,12 @@ function GenerateView({
   onBack: () => void;
 }) {
   const [job, setJob] = useState<Job | null>(null);
+  const [pollError,setPollError]=useState('');
+  const [retry,setRetry]=useState(0);
+  const doneRef=useRef(onDone);doneRef.current=onDone;
 
   useEffect(() => {
+    let failures=0;const started=Date.now();setPollError('');
     let cancelled = false;
     const tick = async () => {
       try {
@@ -842,19 +873,20 @@ function GenerateView({
         if (cancelled) return;
         setJob(next);
         if (next.status === "completed" || next.status === "failed" || next.status === "rejected") {
-          onDone(next);
+          doneRef.current(next);
           return;
         }
       } catch {
-        /* keep polling; the job may not be registered yet */
+        failures++; if(failures>=5){setPollError("Connection lost. Your job may still be running. Retry to reconnect.");return;}
       }
+      if(Date.now()-started>120000){setPollError("This job is taking longer than expected. You can reconnect to check its status.");return;}
       if (!cancelled) window.setTimeout(tick, 700);
     };
     void tick();
     return () => {
       cancelled = true;
     };
-  }, [jobId, onDone]);
+  }, [jobId, retry]);
 
   const status = job?.status ?? "queued";
 
@@ -868,6 +900,7 @@ function GenerateView({
         </p>
       </div>
 
+      {pollError&&<Notice tone="warning" title="Status unavailable">{pollError}<button onClick={()=>setRetry(n=>n+1)}>Reconnect</button></Notice>}
       <Card>
         <div className="row" style={{ gap: 12 }}>
           {status === "queued" || status === "running" ? <Spinner /> : null}
