@@ -49,9 +49,47 @@ def _categorical_names(table: Table) -> list[str]:
     ]
 
 
+class ArfLeafDegeneracyError(RuntimeError):
+    """arfpy could not fit a distribution to one of its own leaves."""
+
+
+def _translate_arf_failure(
+    exc: ValueError, frame: pd.DataFrame, min_node_size: int
+) -> Exception:
+    """Turn an opaque upstream failure into something a reader can act on.
+
+    arfpy fits a truncated normal per numeric column per leaf. When a leaf ends up
+    holding a single distinct value for a column, the scale is zero and SciPy raises a
+    bare "Domain error in arguments" naming neither the library, the column nor the
+    cause. It becomes more likely as rows and correlated columns increase, because the
+    forest splits further.
+    """
+    if "scale" not in str(exc) and "Domain error" not in str(exc):
+        return exc
+
+    numeric = [c for c in frame.columns if pd.api.types.is_numeric_dtype(frame[c])]
+    coarse = sorted(
+        ((int(frame[c].nunique(dropna=True)), c) for c in numeric), key=lambda p: p[0]
+    )[:3]
+    detail = ", ".join(f"'{name}' ({levels} distinct)" for levels, name in coarse)
+
+    return ArfLeafDegeneracyError(
+        "The adversarial random forest split the data until one of its leaves held a "
+        f"single distinct value for a numeric column, which it cannot fit a "
+        f"distribution to (min_node_size={min_node_size}). The columns with the fewest "
+        f"distinct values are the usual cause: {detail}. Either raise the engine's "
+        "minimum leaf size, mark a low-cardinality numeric column as a category so it "
+        "is modelled as a factor, or drop a column that duplicates another."
+    )
+
+
 @register
 class ArfEngine(EngineAdapter):
     name = "arf"
+
+    #: Leaves smaller than this are not split further. Raising it makes a degenerate
+    #: leaf less likely at some cost in fidelity.
+    min_node_size = 5
 
     def __init__(self) -> None:
         self._diagnostics: dict = {}
@@ -77,6 +115,11 @@ class ArfEngine(EngineAdapter):
                 ColumnType.CATEGORY.value, ColumnType.BOOLEAN.value,
                 ColumnType.STRING.value,
             ],
+            # arfpy converts every object column to a pandas category and models it as a
+            # factor. Cost grows roughly with the square of the level count, so a column
+            # with thousands of distinct values does not fail — it runs for minutes and
+            # then produces a model that can only emit values it has already seen.
+            "max_category_levels": 1000,
         }
 
     def generate(
@@ -101,19 +144,23 @@ class ArfEngine(EngineAdapter):
             frame_in[name] = frame_in[name].astype("category")
 
         num_trees = 30
+        min_node_size = self.min_node_size
         with _warnings.catch_warnings(record=True) as caught:
             _warnings.simplefilter("always")
             model = arf.arf(
                 frame_in,
                 num_trees=num_trees,
                 max_iters=3,
-                min_node_size=5,
+                min_node_size=min_node_size,
                 verbose=False,
                 random_state=spec.seed,
                 n_jobs=1,
             )
-            model.forde()
-            raw = model.forge(rows)
+            try:
+                model.forde()
+                raw = model.forge(rows)
+            except ValueError as exc:
+                raise _translate_arf_failure(exc, frame_in, min_node_size) from exc
             collected = sorted({str(w.message) for w in caught})
 
         # arfpy reports one out-of-bag accuracy per adversarial iteration.
@@ -149,7 +196,7 @@ class ArfEngine(EngineAdapter):
             settings={
                 "num_trees": num_trees,
                 "max_iters": 3,
-                "min_node_size": 5,
+                "min_node_size": min_node_size,
                 "seed": spec.seed,
                 "modelled_columns": list(prepared.columns),
                 **self._diagnostics,

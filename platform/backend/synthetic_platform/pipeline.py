@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 import pandas as pd
 
 from . import __version__
-from .derive import apply_derived
+from .derive import DerivationError, apply_derived
 from .engines import base as engine_base
 from .engines.relational import (
     RelationalRuleEngine,
@@ -31,6 +31,7 @@ from .engines.relational import (
 )
 from .evaluate import check_constraints, fidelity, predictive_utility
 from .spec import Mode, SemanticRole, SyntheticDataSpec
+from .suggest import prepare_source
 from .validator import validate
 
 
@@ -69,6 +70,15 @@ def run(
 
     if spec.mode == Mode.LEARNED_TABLE and source is None:
         raise PipelineError(f"Mode 'learned_table' needs source records for '{table.name}'.")
+
+    # Columns that declare a source expression are feature-engineered onto the source
+    # before an engine sees it, so a rewritten specification trains on the columns it
+    # actually declares rather than on whatever the upload happened to contain.
+    if source is not None and any(c.source_expression for c in table.columns):
+        try:
+            source = prepare_source(source, table)
+        except DerivationError as exc:
+            raise PipelineError(f"Could not prepare the source columns: {exc}") from exc
 
     outcome = engine.generate(spec, table, requested, source)
 

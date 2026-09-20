@@ -1,0 +1,192 @@
+{
+  "derived_clipping": {
+    "values": {
+      "x": [
+        10,
+        10,
+        10
+      ],
+      "y": [
+        5,
+        5,
+        5
+      ]
+    },
+    "repairs": {
+      "by_column": {},
+      "repaired_row_fraction": 0.0,
+      "raw_invalid_row_fraction": 0.0,
+      "note": "Repairs are type and bound corrections applied by the platform after generation. A high fraction often means one integer column was returned as a float, not that the data is unusable."
+    },
+    "summary": {
+      "tables": 1,
+      "total_rows": 3,
+      "all_constraints_passed": true,
+      "incomplete_tables": [],
+      "open_assumptions": 2,
+      "elapsed_seconds": 0.026
+    }
+  },
+  "nonnullable_empty": {
+    "nulls": 3,
+    "summary": {
+      "tables": 1,
+      "total_rows": 3,
+      "all_constraints_passed": true,
+      "incomplete_tables": [],
+      "open_assumptions": 1,
+      "elapsed_seconds": 0.0047
+    }
+  },
+  "employee_example": {
+    "rows": {
+      "employees": 50,
+      "projects": 15,
+      "attendance": 1853,
+      "project_assignments": 123
+    },
+    "duplicate_employee_project_pairs": 9,
+    "integrity": [
+      {
+        "relationship": "employees.employee_id -> attendance.employee_id",
+        "child_rows": 1853,
+        "null_keys": 0,
+        "orphan_rows": 0,
+        "integrity": 1.0
+      },
+      {
+        "relationship": "employees.employee_id -> project_assignments.employee_id",
+        "child_rows": 123,
+        "null_keys": 0,
+        "orphan_rows": 0,
+        "integrity": 1.0
+      },
+      {
+        "relationship": "projects.project_id -> project_assignments.project_id",
+        "child_rows": 123,
+        "null_keys": 0,
+        "orphan_rows": 0,
+        "integrity": 1.0
+      }
+    ]
+  },
+  "secondary_one_to_one": {
+    "validation_ok": true,
+    "max_children": 13,
+    "summary": {
+      "tables": 4,
+      "total_rows": 2041,
+      "all_constraints_passed": true,
+      "incomplete_tables": [],
+      "open_assumptions": 14,
+      "elapsed_seconds": 0.0443
+    }
+  },
+  "derived_foreign_key": {
+    "integrity": {
+      "relationship": "employees.employee_id -> attendance.employee_id",
+      "child_rows": 1853,
+      "null_keys": 0,
+      "orphan_rows": 1853,
+      "integrity": 0.0
+    },
+    "summary": {
+      "tables": 4,
+      "total_rows": 2041,
+      "all_constraints_passed": true,
+      "incomplete_tables": [],
+      "open_assumptions": 14,
+      "elapsed_seconds": 0.0292
+    }
+  },
+  "utility_leakage": {
+    "engine_source_rows": 100,
+    "test_rows": 25,
+    "test_rows_seen_by_engine": 25
+  },
+  "artifact_path_escape": {
+    "status": "completed",
+    "outside_job_directory": true
+  },
+  "timezone_roundtrip": {
+    "original": "2026-01-05T05:00:00+00:00",
+    "rebuilt": "2026-01-05 08:00:00+00:00"
+  },
+  "attendance_upload": {
+    "rows": 28549,
+    "columns": 12,
+    "employees": 236,
+    "missing_timeout": 156,
+    "negative_duration": 0,
+    "over_24_hours": 3151,
+    "validation": {
+      "ok": false,
+      "error_count": 4,
+      "warning_count": 2,
+      "findings": [
+        {
+          "severity": "warning",
+          "code": "empty_column",
+          "message": "Column 'attendance_created_by' had no observed values and will be emitted as null.",
+          "scope": "attendance.attendance_created_by"
+        },
+        {
+          "severity": "warning",
+          "code": "no_protected_entity",
+          "message": "Learning from real records without a declared protected entity. For employee data the protected unit is usually the employee, not the row.",
+          "scope": ""
+        },
+        {
+          "severity": "error",
+          "code": "unsupported_column_type",
+          "message": "Engine 'arf' cannot model a 'timestamp' column, so 'attendance_time_in' has to be handled another way \u2014 derive it from a supported column, give it an explicit rule, or choose a different engine.",
+          "scope": "attendance.attendance_time_in"
+        },
+        {
+          "severity": "error",
+          "code": "unsupported_column_type",
+          "message": "Engine 'arf' cannot model a 'timestamp' column, so 'attendance_time_out' has to be handled another way \u2014 derive it from a supported column, give it an explicit rule, or choose a different engine.",
+          "scope": "attendance.attendance_time_out"
+        },
+        {
+          "severity": "error",
+          "code": "unsupported_column_type",
+          "message": "Engine 'arf' cannot model a 'timestamp' column, so 'attendance_created_date' has to be handled another way \u2014 derive it from a supported column, give it an explicit rule, or choose a different engine.",
+          "scope": "attendance.attendance_created_date"
+        },
+        {
+          "severity": "error",
+          "code": "unsupported_column_type",
+          "message": "Engine 'arf' cannot model a 'date' column, so 'sign_in_date' has to be handled another way \u2014 derive it from a supported column, give it an explicit rule, or choose a different engine.",
+          "scope": "attendance.sign_in_date"
+        }
+      ]
+    },
+    "derived_candidates": [
+      {
+        "column": "entry_or_exit_status",
+        "kind": "derived_candidate",
+        "severity": "high",
+        "applied": true,
+        "agreement": 1.0,
+        "message": "'entry_or_exit_status' is true exactly when 'attendance_time_out' is missing (100.0% of rows). Proposed as a derived column so it is computed, not generated."
+      },
+      {
+        "column": "extra_hours",
+        "kind": "derived_candidate",
+        "severity": "high",
+        "applied": true,
+        "agreement": 0.9915,
+        "message": "'extra_hours' equals the hours between 'attendance_time_in' and 'attendance_time_out' minus 6, rounded (99.2% of rows). Proposed as a derived column so it is computed, not generated."
+      },
+      {
+        "column": "late_status",
+        "kind": "derived_candidate",
+        "severity": "high",
+        "applied": true,
+        "agreement": 0.9755,
+        "message": "'late_status' is true when 'attendance_time_in' is later than 04:45 UTC (97.6% of rows). Proposed as a derived column so it is computed, not generated."
+      }
+    ]
+  }
+}

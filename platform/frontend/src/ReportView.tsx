@@ -244,6 +244,9 @@ export function ReportView({
           <a href={api.reportUrl(jobId)} download>
             <button>Download full report (JSON)</button>
           </a>
+          <a href={api.specUrl(jobId)} download>
+            <button>Download specification (JSON)</button>
+          </a>
           <button className="ghost" onClick={onRestart}>
             Start another dataset
           </button>

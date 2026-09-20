@@ -6,6 +6,7 @@ import {
   type Job,
   type Preview,
   type ProfileReport,
+  type FixSuggestion,
   type Spec,
   type SpecTable,
   type UploadResult,
@@ -377,6 +378,46 @@ function ReviewView({
   const [starting, setStarting] = useState(false);
   const [tzOffset, setTzOffset] = useState(0);
   const [reprofiling, setReprofiling] = useState(false);
+  const [fixes, setFixes] = useState<FixSuggestion[]>([]);
+  const [applying, setApplying] = useState(false);
+
+  const blockedColumns = (validation?.findings ?? []).filter(
+    (f) => f.code === "unsupported_column_type",
+  );
+
+  useEffect(() => {
+    if (blockedColumns.length === 0) {
+      setFixes([]);
+      return;
+    }
+    let cancelled = false;
+    api
+      .suggest(spec, uploadId, tzOffset)
+      .then((r) => !cancelled && setFixes(r.suggestions))
+      .catch(() => !cancelled && setFixes([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [blockedColumns.length, spec, uploadId, tzOffset]);
+
+  const applyFixes = async () => {
+    setApplying(true);
+    try {
+      const result = await api.applySuggestions(
+        spec,
+        fixes.map((f) => f.column),
+        uploadId,
+        tzOffset,
+      );
+      setSpec(result.spec);
+      await onValidate(result.spec);
+      setFixes([]);
+    } catch (exc) {
+      onError(String(exc));
+    } finally {
+      setApplying(false);
+    }
+  };
 
   // Threshold rules are only discoverable against the clock the policy is written in:
   // the same attendance cutoff reads as 07:45 at UTC+3 and 04:45 at UTC.
@@ -507,6 +548,46 @@ function ReviewView({
               {note.message}
             </Notice>
           ))}
+        </Card>
+      ) : null}
+
+      {fixes.length > 0 ? (
+        <Card
+          title="Suggested fix"
+          sub={`${fixes.length} column${fixes.length > 1 ? "s" : ""} this engine cannot model`}
+          actions={
+            <button className="primary" disabled={applying} onClick={() => void applyFixes()}>
+              {applying ? "Applying…" : "Apply suggested fix"}
+            </button>
+          }
+        >
+          <Notice tone="warning" title="A default, not a finding">
+            Nothing in your data says these are the right features to keep — they are a
+            sensible default this tool chose. Applying them records each new column as an
+            unconfirmed assumption in the evidence report.
+          </Notice>
+          <div className="stack" style={{ gap: 12 }}>
+            {fixes.map((fix) => (
+              <div key={fix.column}>
+                <div className="row" style={{ gap: 8, marginBottom: 4 }}>
+                  <strong className="mono">{fix.column}</strong>
+                  <Badge tone="accent">{fix.kind.replace(/_/g, " ")}</Badge>
+                </div>
+                <p className="small secondary" style={{ marginBottom: 6 }}>
+                  {fix.rationale}
+                </p>
+                <div className="row small" style={{ gap: 6 }}>
+                  <span className="muted">adds</span>
+                  {fix.adds.map((added) => (
+                    <span key={added.name} className="row" style={{ gap: 4 }}>
+                      <code>{added.name}</code>
+                      <RoleChip role={added.role} />
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </Card>
       ) : null}
 

@@ -207,7 +207,13 @@ class Column(BaseModel):
     allowed_values: list[Any] | None = None
     constant_value: Any = None
     rule: Rule | None = None
+    # `formula` computes this column from the generated output, after an engine runs.
     formula: Expr | None = None
+    # `source_expression` computes it from the *source* data, before an engine fits —
+    # feature engineering that has to survive in the specification so the same columns
+    # can be rebuilt on a re-run. The two are deliberately separate: one describes how
+    # a value is produced, the other how a training input is prepared.
+    source_expression: Expr | None = None
     sensitive: bool = False  # metadata for policy handling, not a detection guarantee
     provenance: Provenance = Field(
         default_factory=lambda: Provenance(origin=Origin.UNRESOLVED)

@@ -189,6 +189,57 @@ def reprofile(upload_id: str, tz_offset_hours: float = 0.0) -> dict:
 # --- validation ------------------------------------------------------------------
 
 
+class SuggestRequest(BaseModel):
+    spec: dict
+    upload_id: str | None = None
+    tz_offset_hours: float = 0.0
+    accept: list[str] | None = None  # columns whose suggestions to apply
+
+
+@app.post("/api/suggest")
+def suggest_fixes(request: SuggestRequest) -> dict:
+    """Propose deterministic rewrites for columns the chosen engine cannot model.
+
+    With `accept`, returns the rewritten specification instead. Nothing is applied
+    unless a caller names it: the rewrite is mechanical, but which features it keeps is
+    a default rather than a finding, so a person has to take it.
+    """
+    from .engines import base as engine_base
+    from .suggest import apply_suggestions, suggest_for_table
+
+    try:
+        spec = SyntheticDataSpec.model_validate(request.spec)
+    except Exception as exc:
+        raise HTTPException(422, f"The specification is not well formed: {exc}") from exc
+
+    try:
+        capabilities = engine_base.get_engine(engine_base.choose_engine(spec)).capabilities()
+    except KeyError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+    frame = None
+    if request.upload_id:
+        frame = _load_upload(request.upload_id)
+
+    table = spec.primary_table
+    suggestions = suggest_for_table(table, capabilities, request.tz_offset_hours, frame)
+
+    if request.accept is None:
+        return {
+            "engine": capabilities["name"],
+            "suggestions": [s.as_dict() for s in suggestions],
+        }
+
+    rewritten = apply_suggestions(table, suggestions, set(request.accept))
+    spec.tables[0] = rewritten
+    return {
+        "engine": capabilities["name"],
+        "applied": request.accept,
+        "spec": json.loads(spec.model_dump_json()),
+        "validation": validate(spec, capabilities).as_dict(),
+    }
+
+
 @app.post("/api/validate")
 def validate_spec(request: ValidateRequest) -> dict:
     """Check a specification without generating anything."""
@@ -356,6 +407,20 @@ def download_report(job_id: str):
     if not path.exists():
         raise HTTPException(404, "No report for this job.")
     return FileResponse(path, media_type="application/json", filename="evidence_report.json")
+
+
+@app.get("/api/jobs/{job_id}/specification")
+def download_specification(job_id: str):
+    """The specification that produced this dataset.
+
+    The report says what happened; this is the artefact that reproduces it. Keeping it
+    reachable only by digging through the storage directory made the reproducible part
+    of the deliverable the hardest part to obtain.
+    """
+    path = STORAGE / job_id / "specification.json"
+    if not path.exists():
+        raise HTTPException(404, "No specification for this job.")
+    return FileResponse(path, media_type="application/json", filename="specification.json")
 
 
 # --- examples --------------------------------------------------------------------

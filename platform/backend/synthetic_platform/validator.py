@@ -531,6 +531,33 @@ def _validate_capabilities(spec: SyntheticDataSpec, caps: dict, result: Validati
                         )
                     )
 
+    # A type an engine accepts can still be unusable at scale. A categorical model over
+    # thousands of levels is the same failure as an unsupported type, just slower to
+    # arrive, so the ceiling is checked in the same place.
+    ceiling = caps.get("max_category_levels")
+    if ceiling:
+        categorical = {ColumnType.CATEGORY, ColumnType.STRING}
+        for table in spec.tables:
+            for column in table.columns:
+                if column.role not in {SemanticRole.LEARNED, SemanticRole.RULE}:
+                    continue
+                if column.type not in categorical or column.allowed_values is None:
+                    continue
+                levels = len(column.allowed_values)
+                if levels > ceiling:
+                    result.findings.append(
+                        Finding(
+                            Severity.ERROR,
+                            "too_many_category_levels",
+                            f"Column '{column.name}' has {levels:,} distinct values, but "
+                            f"engine '{caps.get('name', '?')}' handles at most "
+                            f"{ceiling:,} as a category. Group the values, mark the "
+                            "column an identifier so it is regenerated, or derive a "
+                            "lower-cardinality feature from it.",
+                            f"{table.name}.{column.name}",
+                        )
+                    )
+
     # Only columns an engine actually models need to be a type it supports; the rest
     # are filled by the platform. Without this check a tree-based engine is handed raw
     # timestamps and either fails deep inside its own fit or runs for a very long time

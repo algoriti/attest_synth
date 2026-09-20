@@ -119,6 +119,24 @@ export interface Relationship {
   child_count_max?: number | null;
 }
 
+export interface SuggestionColumn {
+  name: string;
+  type: string;
+  role: string;
+  description?: string;
+}
+
+export interface FixSuggestion {
+  column: string;
+  kind: string;
+  title: string;
+  rationale: string;
+  adds: SuggestionColumn[];
+  replaces_role: string | null;
+  confirmed: boolean;
+  origin: string;
+}
+
 export interface Engine {
   name: string;
   label: string;
@@ -265,6 +283,20 @@ export const api = {
       json<{ profile: ProfileReport; proposed_table: SpecTable; tz_offset_hours: number }>,
     ),
 
+  suggest: (spec: Spec, uploadId?: string, tzOffsetHours = 0) =>
+    fetch(`${BASE}/api/suggest`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ spec, upload_id: uploadId, tz_offset_hours: tzOffsetHours }),
+    }).then(json<{ engine: string; suggestions: FixSuggestion[] }>),
+
+  applySuggestions: (spec: Spec, accept: string[], uploadId?: string, tzOffsetHours = 0) =>
+    fetch(`${BASE}/api/suggest`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ spec, upload_id: uploadId, tz_offset_hours: tzOffsetHours, accept }),
+    }).then(json<{ engine: string; applied: string[]; spec: Spec; validation: ValidationResult }>),
+
   validate: (spec: Spec) =>
     fetch(`${BASE}/api/validate`, {
       method: "POST",
@@ -283,4 +315,5 @@ export const api = {
 
   downloadUrl: (jobId: string, table: string) => `${BASE}/api/jobs/${jobId}/download/${table}`,
   reportUrl: (jobId: string) => `${BASE}/api/jobs/${jobId}/report`,
+  specUrl: (jobId: string) => `${BASE}/api/jobs/${jobId}/specification`,
 };

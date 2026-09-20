@@ -20,6 +20,11 @@ from synthetic_platform.engines.relational import (
 from synthetic_platform.evaluate import check_constraints
 from synthetic_platform.pipeline import PipelineError, run
 from synthetic_platform.profile import profile_csv
+from synthetic_platform.suggest import (
+    apply_suggestions,
+    prepare_source,
+    suggest_for_table,
+)
 from synthetic_platform.spec import (
     Column,
     ColumnType,
@@ -803,3 +808,185 @@ def test_capability_check_ignores_columns_the_engine_never_sees():
     )
     result = validate(spec, get_engine("arf").capabilities())
     assert not any(f.code == "unsupported_column_type" for f in result.errors)
+
+
+# --- suggested rewrites for unsupported columns -----------------------------------
+
+
+def _temporal_source(with_time: bool = True) -> pd.DataFrame:
+    rng = np.random.default_rng(7)
+    n = 300
+    start = pd.Timestamp("2026-03-04", tz="UTC")  # a Wednesday
+    offsets = rng.integers(0, 60, n)
+    stamps = start + pd.to_timedelta(offsets, unit="D")
+    if with_time:
+        stamps = stamps + pd.to_timedelta(rng.integers(4 * 60, 11 * 60, n), unit="min")
+    return pd.DataFrame({"when": stamps, "amount": rng.normal(50, 8, n).round(3)})
+
+
+def test_suggestion_offered_only_for_unsupported_columns():
+    table, _ = profile_csv(_temporal_source(), "events")
+    caps = get_engine("arf").capabilities()
+    suggestions = suggest_for_table(table, caps, 0.0, _temporal_source())
+
+    assert [s.column for s in suggestions] == ["when"]
+    assert suggestions[0].kind == "temporal_features"
+
+
+def test_no_suggestion_when_the_engine_supports_everything():
+    table, _ = profile_csv(_temporal_source(), "events")
+    caps = get_engine("independent").capabilities()
+    assert suggest_for_table(table, caps, 0.0) == []
+
+
+def test_applied_suggestion_clears_the_validation_error():
+    source = _temporal_source()
+    table, _ = profile_csv(source, "events")
+    caps = get_engine("arf").capabilities()
+
+    spec = SyntheticDataSpec(
+        name="events", mode=Mode.LEARNED_TABLE, purpose=Purpose.ML_DEVELOPMENT,
+        engine="arf", tables=[table],
+    )
+    assert any(f.code == "unsupported_column_type" for f in validate(spec, caps).errors)
+
+    spec.tables[0] = apply_suggestions(table, suggest_for_table(table, caps, 0.0, source))
+    assert not any(f.code == "unsupported_column_type" for f in validate(spec, caps).errors)
+
+
+def test_suggestion_is_never_applied_without_being_accepted():
+    source = _temporal_source()
+    table, _ = profile_csv(source, "events")
+    caps = get_engine("arf").capabilities()
+    suggestions = suggest_for_table(table, caps, 0.0, source)
+
+    untouched = apply_suggestions(table, suggestions, accept=set())
+    assert untouched.column("when").role == SemanticRole.LEARNED
+    assert untouched.column("when_hour") is None
+
+
+def test_suggested_columns_are_marked_as_unconfirmed_assumptions():
+    """A hardcoded default is still a claim the user did not make."""
+    source = _temporal_source()
+    table, _ = profile_csv(source, "events")
+    caps = get_engine("arf").capabilities()
+    rewritten = apply_suggestions(table, suggest_for_table(table, caps, 0.0, source))
+
+    spec = SyntheticDataSpec(
+        name="events", mode=Mode.LEARNED_TABLE, purpose=Purpose.ML_DEVELOPMENT,
+        engine="arf", tables=[rewritten],
+    )
+    scopes = {a["scope"] for a in spec.open_assumptions()}
+    assert "events.when_hour" in scopes
+    assert all(
+        a["origin"] == "assistant_proposed"
+        for a in spec.open_assumptions()
+        if a["scope"].endswith(("_hour", "_weekday", "_anchor"))
+    )
+
+
+def test_date_column_gets_no_hour_feature():
+    """A date sits at midnight, so an extracted hour would be constant.
+
+    Regression: arfpy fits a truncated normal per numeric column and fails with a
+    scipy domain error when the scale is zero.
+    """
+    frame = _temporal_source(with_time=False)
+    table, _ = profile_csv(frame, "events")
+    assert table.column("when").type == ColumnType.DATE
+
+    caps = get_engine("arf").capabilities()
+    suggestion = suggest_for_table(table, caps, 0.0, frame)[0]
+    added = {c.name for c in suggestion.adds}
+    assert "when_weekday" in added
+    assert "when_hour" not in added
+
+    prepared = prepare_source(frame, apply_suggestions(table, [suggestion]))
+    assert prepared["when_weekday"].std() > 0
+
+
+def test_rewritten_spec_generates_and_rebuilds_the_timestamp():
+    source = _temporal_source()
+    table, _ = profile_csv(source, "events")
+    caps = get_engine("arf").capabilities()
+    rewritten = apply_suggestions(table, suggest_for_table(table, caps, 0.0, source))
+
+    spec = SyntheticDataSpec(
+        name="events", mode=Mode.LEARNED_TABLE, purpose=Purpose.ML_DEVELOPMENT,
+        engine="independent", seed=3, tables=[rewritten],
+    )
+    frame = run(spec, sources={"events": source}, rows=120)["frames"]["events"]
+
+    assert len(frame) == 120
+    rebuilt = pd.to_datetime(frame["when"], utc=True)
+    assert rebuilt.notna().all()
+    # Every rebuilt value falls inside the one anchor week.
+    span = (rebuilt.max() - rebuilt.min()).total_seconds() / 86400
+    assert span <= 7
+
+
+def test_source_expression_features_are_materialised():
+    source = _temporal_source()
+    table, _ = profile_csv(source, "events")
+    caps = get_engine("arf").capabilities()
+    rewritten = apply_suggestions(table, suggest_for_table(table, caps, 0.0, source))
+
+    assert "when_hour" not in source.columns
+    prepared = prepare_source(source, rewritten)
+    assert "when_hour" in prepared.columns
+    assert prepared["when_hour"].between(0, 24).all()
+    assert prepared["when_weekday"].between(0, 6).all()
+
+
+# --- cardinality ceiling ----------------------------------------------------------
+
+
+def test_high_cardinality_category_is_rejected():
+    """A supported type can still be unusable at scale.
+
+    Regression: a string column with tens of thousands of levels passed the type
+    check and then ran for minutes inside arfpy's categorical model.
+    """
+    table = Table(
+        name="t",
+        columns=[
+            Column(
+                name="email",
+                type=ColumnType.CATEGORY,
+                role=SemanticRole.LEARNED,
+                allowed_values=[f"user{i}@example.com" for i in range(5000)],
+            )
+        ],
+        source={"kind": "uploaded_csv"},
+    )
+    spec = SyntheticDataSpec(
+        name="t", mode=Mode.LEARNED_TABLE, purpose=Purpose.ML_DEVELOPMENT,
+        engine="arf", tables=[table],
+    )
+    result = validate(spec, get_engine("arf").capabilities())
+    finding = next(f for f in result.errors if f.code == "too_many_category_levels")
+    assert "5,000" in finding.message
+    assert "1,000" in finding.message
+
+
+def test_cardinality_ceiling_ignores_identifiers():
+    """Identifiers are regenerated, so their level count never reaches the engine."""
+    table = Table(
+        name="t",
+        columns=[
+            Column(
+                name="user_id",
+                type=ColumnType.CATEGORY,
+                role=SemanticRole.IDENTIFIER,
+                allowed_values=[f"U{i}" for i in range(5000)],
+            ),
+            Column(name="score", type=ColumnType.NUMBER, role=SemanticRole.LEARNED),
+        ],
+        source={"kind": "uploaded_csv"},
+    )
+    spec = SyntheticDataSpec(
+        name="t", mode=Mode.LEARNED_TABLE, purpose=Purpose.ML_DEVELOPMENT,
+        engine="arf", tables=[table],
+    )
+    result = validate(spec, get_engine("arf").capabilities())
+    assert not any(f.code == "too_many_category_levels" for f in result.errors)

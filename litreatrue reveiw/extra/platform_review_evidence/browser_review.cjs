@@ -1,0 +1,33 @@
+// node browser_review.cjs /absolute/path/to/playwright-core
+const { chromium } = require(process.argv[2]);
+const fs = require('node:fs');
+const path = require('node:path');
+(async () => {
+  const browser = await chromium.launch({executablePath:'/usr/bin/google-chrome', headless:true});
+  const page = await browser.newPage({viewport:{width:1440,height:1000}});
+  const errors=[];
+  page.on('pageerror',e=>errors.push(String(e)));
+  await page.goto('http://127.0.0.1:8771');
+  await page.getByText('Registered engines',{exact:true}).waitFor();
+  await page.screenshot({path:path.join(__dirname,'ui_start.png'),fullPage:true});
+  const examples=await page.locator('button.example-card').allTextContents();
+  await page.locator('button.example-card').filter({hasText:'employee_relational'}).click();
+  await page.getByRole('button',{name:'Generate dataset',exact:true}).click();
+  await page.getByRole('heading',{name:'Evidence report',exact:true}).waitFor({timeout:30000});
+  await page.screenshot({path:path.join(__dirname,'ui_relational_report.png'),fullPage:true});
+  const reportText=await page.locator('main').innerText();
+  await page.getByRole('button',{name:'Start another dataset'}).click();
+  const lines=['timestamp,value'];
+  for(let i=0;i<120;i++) lines.push(`${new Date(Date.UTC(2026,0,1,i)).toISOString()},${(i*37)%101}`);
+  await page.locator('input[type=file]').setInputFiles({name:'review_fixture.csv',mimeType:'text/csv',buffer:Buffer.from(lines.join('\n'))});
+  await page.getByText('The specification was rejected',{exact:true}).waitFor({timeout:20000});
+  const rejection=await page.locator('main').innerText();
+  const generateDisabled=await page.getByRole('button',{name:'Generate dataset',exact:true}).isDisabled();
+  await page.screenshot({path:path.join(__dirname,'ui_timestamp_rejection.png'),fullPage:true});
+  await page.setViewportSize({width:390,height:844});
+  await page.screenshot({path:path.join(__dirname,'ui_mobile_review.png'),fullPage:true});
+  const mobile=await page.evaluate(()=>({viewport:innerWidth,documentWidth:document.documentElement.scrollWidth}));
+  fs.writeFileSync(path.join(__dirname,'browser_results.json'),JSON.stringify({examples,errors,reportText,rejection,generateDisabled,mobile},null,2));
+  console.log(JSON.stringify({examples,errors,generateDisabled,mobile}));
+  await browser.close();
+})().catch(e=>{console.error(e);process.exit(1)});
