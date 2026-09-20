@@ -555,3 +555,61 @@ def test_referential_integrity_detects_injected_orphan():
     frames["attendance"].loc[0, "employee_id"] = "EMP-NOT-REAL"
     integrity = referential_integrity(spec, frames)
     assert integrity[0]["orphan_rows"] == 1
+
+
+def test_profiler_detects_numeric_offset_rule():
+    """A rule that survives feature engineering must still be found.
+
+    Once timestamps become a `shift_hours` feature, "overtime = hours beyond a
+    six-hour day" is a plain numeric relationship rather than a duration one.
+    """
+    rng = np.random.default_rng(17)
+    shift_hours = np.round(rng.uniform(6.5, 16.0, 500), 3)
+    frame = pd.DataFrame(
+        {
+            "shift_hours": shift_hours,
+            "extra_hours": np.round(shift_hours - 6).astype(int),
+            "noise": rng.integers(0, 90, 500),
+        }
+    )
+    table, _ = profile_csv(frame, "shifts")
+    assert table.column("extra_hours").role == SemanticRole.DERIVED
+
+
+def test_profiler_detects_numeric_threshold_rule():
+    rng = np.random.default_rng(23)
+    clock_in = np.round(rng.uniform(4.0, 11.0, 500), 3)
+    frame = pd.DataFrame(
+        {
+            "clock_in_hour": clock_in,
+            "late_status": clock_in > 7.75,
+            "noise": rng.integers(0, 90, 500),
+        }
+    )
+    table, _ = profile_csv(frame, "shifts")
+    assert table.column("late_status").role == SemanticRole.DERIVED
+
+
+def test_derived_column_cannot_contradict_its_inputs():
+    """The property the whole derived-column design exists to guarantee."""
+    rng = np.random.default_rng(29)
+    shift_hours = np.round(rng.uniform(6.5, 16.0, 400), 3)
+    source = pd.DataFrame(
+        {
+            "shift_hours": shift_hours,
+            "extra_hours": np.round(shift_hours - 6).astype(int),
+        }
+    )
+    table, _ = profile_csv(source, "shifts")
+    assert table.column("extra_hours").role == SemanticRole.DERIVED
+
+    spec = SyntheticDataSpec(
+        name="shifts",
+        mode=Mode.LEARNED_TABLE,
+        purpose=Purpose.ML_DEVELOPMENT,
+        engine="independent",
+        tables=[table],
+    )
+    frame = run(spec, sources={"shifts": source}, rows=300)["frames"]["shifts"]
+    expected = np.clip(np.round(frame["shift_hours"] - 6), 0, None)
+    assert (frame["extra_hours"] == expected).all()

@@ -7,3 +7,5 @@ node_modules/
 *.egg-info/
 .pytest_cache/
 storage/
+platform/backend/demo_output/
+platform/frontend/dist/

@@ -317,7 +317,9 @@ def detect_derived(
     findings: list[dict] = []
     findings.extend(_detect_null_flags(frame, table))
     findings.extend(_detect_duration_offsets(frame, table, parsed))
+    findings.extend(_detect_numeric_offsets(frame, table))
     findings.extend(_detect_threshold_flags(frame, table, parsed, tz_offset_hours))
+    findings.extend(_detect_numeric_thresholds(frame, table))
     findings.extend(_detect_products(frame, table))
     return sorted(findings, key=lambda f: -f["agreement"])
 
@@ -421,6 +423,108 @@ def _detect_duration_offsets(
                             },
                         }
                     )
+    return findings
+
+
+def _detect_numeric_offsets(frame: pd.DataFrame, table: Table) -> list[dict]:
+    """An integer column that is round(another numeric column - k).
+
+    The timestamp version of this only fires on raw exports. Once someone has turned
+    `time_in`/`time_out` into a `shift_hours` feature, the same business rule is a plain
+    numeric relationship and would otherwise slip through as an ordinary column.
+    """
+    findings = []
+    numeric = [
+        c.name
+        for c in table.columns
+        if c.type in (ColumnType.INTEGER, ColumnType.NUMBER) and c.name in frame.columns
+    ]
+
+    for target in numeric:
+        target_values = pd.to_numeric(frame[target], errors="coerce")
+        if target_values.nunique(dropna=True) < 3:
+            continue
+        for source in numeric:
+            if source == target:
+                continue
+            source_values = pd.to_numeric(frame[source], errors="coerce")
+            # A zero bucket is commonly a catch-all rather than part of the rule, so the
+            # offset is estimated on the rows where the rule can actually apply.
+            usable = source_values.notna() & target_values.notna() & (target_values > 0)
+            if usable.sum() < 50:
+                continue
+            offset = (source_values[usable] - target_values[usable]).median()
+            if not np.isfinite(offset):
+                continue
+            offset = float(np.round(offset * 2) / 2)  # nearest half unit
+            predicted = np.round(source_values[usable] - offset)
+            agreement = float((predicted == target_values[usable]).mean())
+            if agreement >= DERIVED_HINT_THRESHOLD:
+                findings.append(
+                    {
+                        "column": target,
+                        "agreement": agreement,
+                        "explanation": (
+                            f"'{target}' equals '{source}' minus {offset:g}, rounded"
+                        ),
+                        "formula": {
+                            "op": "clip",
+                            "args": [
+                                {
+                                    "op": "round",
+                                    "args": [
+                                        {
+                                            "op": "sub",
+                                            "args": [{"col": source}, {"const": offset}],
+                                        }
+                                    ],
+                                },
+                                {"const": 0},
+                                {"const": float(target_values.max())},
+                            ],
+                        },
+                    }
+                )
+    return findings
+
+
+def _detect_numeric_thresholds(frame: pd.DataFrame, table: Table) -> list[dict]:
+    """A boolean that is 'some numeric column is past a cutoff'."""
+    findings = []
+    numeric = [
+        c.name
+        for c in table.columns
+        if c.type in (ColumnType.INTEGER, ColumnType.NUMBER) and c.name in frame.columns
+    ]
+
+    for flag in _boolean_columns(frame, table):
+        flag_values = frame[flag].astype(bool)
+        for name in numeric:
+            values = pd.to_numeric(frame[name], errors="coerce")
+            if values.notna().sum() < 50 or values.nunique(dropna=True) < 5:
+                continue
+            # Candidate cutoffs sit between the two groups' typical values.
+            low, high = values.quantile(0.01), values.quantile(0.99)
+            if not (np.isfinite(low) and np.isfinite(high)) or high <= low:
+                continue
+            best_agreement, best_cut = 0.0, None
+            for cut in np.linspace(low, high, 96):
+                agreement = float(((values > cut) == flag_values).mean())
+                if agreement > best_agreement:
+                    best_agreement, best_cut = agreement, float(cut)
+            if best_agreement >= DERIVED_HINT_THRESHOLD and best_cut is not None:
+                cut = float(np.round(best_cut * 100) / 100)
+                findings.append(
+                    {
+                        "column": flag,
+                        "agreement": best_agreement,
+                        "explanation": f"'{flag}' is true when '{name}' is above {cut:g}",
+                        "formula": {
+                            "op": "gt",
+                            "args": [{"col": name}, {"const": cut}],
+                        },
+                    }
+                )
     return findings
 
 
