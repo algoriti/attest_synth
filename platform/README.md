@@ -68,7 +68,7 @@ Run the tests and the demonstration:
 
 ```bash
 cd platform/backend
-python -m pytest tests/ -q              # 43 tests
+python -m pytest tests/ -q              # 64 tests
 python demo_attendance.py --rows 2000   # naive vs platform comparison
 ```
 
@@ -181,12 +181,27 @@ after its clock-in.
 ### Known upstream fragility
 
 arfpy 0.1.1 fails when the forest splits until a leaf holds one distinct value for a
-numeric column, raising a bare SciPy "Domain error in arguments". It becomes more
-likely with scale — on the attendance features it succeeded at 8,000 rows and failed
-at 16,000. The adapter escalates its minimum leaf size (5 → 20 → 50) rather than
-giving up, which also happens to be faster (79s against 106s at 16,000 rows), and
-records the retry in the report's warnings. If every rung fails, the error names the
-likely columns and the ways out.
+numeric column, raising a bare SciPy "Domain error in arguments".
+
+Measured on the attendance time features, the failure is **not monotonic** in either
+row count or leaf size:
+
+| Rows | `min_node_size=5` | `min_node_size=20` |
+|---:|---|---|
+| 8,000 | OK (57s) | OK (43s) |
+| 16,000 | **fails** (106s) | OK (79s) |
+| 28,549 | OK (232s) | **fails** (166s) |
+
+Coarsening the leaves is therefore *not* a general fix — at 28,549 rows it is the
+coarser setting that fails. Which configurations break appears to depend on the tree
+structure a given seed and data size happen to produce, so there is no setting that is
+reliably safe.
+
+The adapter treats it accordingly: it retries across leaf sizes (5 → 20 → 50) because
+a rung that fails is uncorrelated with one that succeeds, and records in the report's
+warnings when it had to move. Do not pin `min_node_size` to a larger value in the hope
+of avoiding this; that trades one failing configuration for another. If every rung
+fails, the error names the likely columns and the ways out.
 
 `independent` is kept deliberately. It is the floor every utility number is measured
 against — on the education benchmark it scored 3.967 MAE against real data's 0.994

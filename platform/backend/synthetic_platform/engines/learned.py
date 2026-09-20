@@ -87,12 +87,13 @@ def _translate_arf_failure(
 class ArfEngine(EngineAdapter):
     name = "arf"
 
-    #: Leaves smaller than the first value are not split further. arfpy fails on a
-    #: leaf that holds a single distinct value for a numeric column, and that becomes
-    #: more likely as rows increase: on the attendance features it succeeded at 8,000
-    #: rows and failed at 16,000. Coarsening the leaves fixes it and is also faster
-    #: (79s against 106s at 16,000 rows), so the adapter escalates rather than giving
-    #: up, and says in the report that it did.
+    #: Leaf sizes to try, in order. arfpy fails on a leaf holding a single distinct
+    #: value for a numeric column, and the failure is not monotonic in either row count
+    #: or leaf size: on the attendance features, 16,000 rows failed at leaf size 5 and
+    #: succeeded at 20, while 28,549 rows did the opposite. Coarsening is therefore not
+    #: a fix, and pinning a larger value only trades one failing configuration for
+    #: another. The ladder works because a failing rung is uncorrelated with a
+    #: succeeding one, which is also why every move is disclosed in the report.
     leaf_size_ladder = (5, 20, 50)
 
     def __init__(self) -> None:
