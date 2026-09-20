@@ -16,3 +16,6 @@ platform/frontend/dist/
 !.env.example
 platform/backend/storage/
 platform/frontend/dist/
+
+# Internal: describes the source system in detail. Kept local, not published.
+docs/how-the-poc-works.md

@@ -22,9 +22,9 @@ cd ../backend && python -m uvicorn synthetic_platform.api:app --port 8770
 
 Real operational data contains business rules that look like ordinary columns.
 
-Profiling a 28,549-row attendance export, three of its twelve columns turned out to be
-formulas rather than behaviour — an "is late" flag that was just *clocked in after
-07:45*, an overtime figure that was just *hours past a six-hour day*.
+Profiling a real attendance export, a quarter of its columns turned out to be formulas
+rather than behaviour — an "is late" flag that was really just *clocked in after a
+fixed cutoff*, an overtime figure that was really just *hours past a standard day*.
 
 Hand that to a machine-learning generator and it imitates all three as statistics. The
 distributions look healthy and the rows are nonsense: six-hour shifts carrying nine
@@ -83,7 +83,6 @@ criteria before it ships.
 
 | | |
 |---|---|
-| [How it works](docs/how-the-poc-works.md) | The full guide: design, roadmap, and every failure along the way |
 | [Platform README](platform/README.md) | Engines, roles, the expression vocabulary, running it |
 | [Literature review](literature-review/README.md) | The research and benchmark the design is built on |
 
