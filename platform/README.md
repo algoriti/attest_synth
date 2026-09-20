@@ -1,4 +1,4 @@
-# Synthetic Data Platform — proof of concept
+# Attest — the platform
 
 A specification-driven platform for generating synthetic structured data, with an
 evidence report that states what was actually done and what the result does not
