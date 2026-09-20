@@ -117,6 +117,8 @@ def profile_csv(
             }
         )
 
+    notes.extend(_verify_proposed_formulas(frame, table))
+
     quality = _quality_notes(frame, parsed)
     report = {
         "rows": int(len(frame)),
@@ -127,6 +129,64 @@ def profile_csv(
         "role_summary": _role_summary(table),
     }
     return table, report
+
+
+def _verify_proposed_formulas(frame: pd.DataFrame, table: Table) -> list[dict]:
+    """Run every proposed formula against the source before anyone relies on it.
+
+    A formula is only a hypothesis until it has been evaluated. Proposing one that
+    cannot be computed for part of the data and discovering that at generation time —
+    as a cast failure deep in pandas — is exactly the kind of late surprise the
+    specification exists to prevent.
+
+    A column whose formula has gaps is marked nullable here, so the gap is carried
+    honestly into generation rather than crashing it.
+    """
+    from .derive import evaluate
+
+    notes: list[dict] = []
+    for column in table.columns:
+        if column.role != Role.DERIVED or column.formula is None:
+            continue
+        try:
+            values = evaluate(column.formula, frame)
+        except Exception as exc:  # a proposal that cannot run is withdrawn
+            column.role = Role.LEARNED
+            column.formula = None
+            notes.append(
+                {
+                    "column": column.name,
+                    "kind": "formula_withdrawn",
+                    "severity": "high",
+                    "message": (
+                        f"The proposed formula for '{column.name}' could not be evaluated "
+                        f"({type(exc).__name__}), so the column was left as an ordinary "
+                        "learned column."
+                    ),
+                }
+            )
+            continue
+
+        if not isinstance(values, pd.Series):
+            continue
+        missing = int(values.isna().sum())
+        if missing:
+            column.nullable = True
+            column.null_fraction = missing / len(frame) if len(frame) else 0.0
+            notes.append(
+                {
+                    "column": column.name,
+                    "kind": "formula_gap",
+                    "severity": "high",
+                    "message": (
+                        f"The formula for '{column.name}' cannot be computed for "
+                        f"{missing:,} of {len(frame):,} source rows, usually because an "
+                        "input is null there. The column is marked nullable so those rows "
+                        "are generated as missing rather than invented."
+                    ),
+                }
+            )
+    return notes
 
 
 def _frame_hash(frame: pd.DataFrame) -> str:
@@ -552,13 +612,21 @@ def _detect_threshold_flags(
                     best_agreement, best_cut = agreement, float(cut)
             if best_agreement >= DERIVED_HINT_THRESHOLD and best_cut is not None:
                 hours, minutes = int(best_cut), int(round((best_cut % 1) * 60))
+                # Name the clock the cutoff is expressed in. Calling a UTC time "local"
+                # would hide the one setting that decides whether the rule is right: the
+                # same attendance policy reads as 07:45 at UTC+3 and 04:45 at UTC.
+                clock = (
+                    "UTC"
+                    if tz_offset_hours == 0
+                    else f"UTC{tz_offset_hours:+g}".replace(".0", "")
+                )
                 findings.append(
                     {
                         "column": flag,
                         "agreement": best_agreement,
                         "explanation": (
                             f"'{flag}' is true when '{name}' is later than "
-                            f"{hours:02d}:{minutes:02d} local time"
+                            f"{hours:02d}:{minutes:02d} {clock}"
                         ),
                         "formula": {
                             "op": "gt",

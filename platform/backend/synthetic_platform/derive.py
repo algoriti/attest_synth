@@ -205,19 +205,65 @@ def apply_derived(frame: pd.DataFrame, table: Table) -> tuple[pd.DataFrame, list
     return result, trace
 
 
+def _missing_value_error(column: Column, count: int, total: int) -> DerivationError:
+    """Explain an uncomputable formula in terms of the input that caused it.
+
+    "Cannot convert non-finite values to integer" tells the reader nothing about
+    which column broke or why, so the message names the column, the scale of the
+    problem and the usual cause: an input that is null for those rows.
+    """
+    inputs = ", ".join(sorted(column.formula.referenced_columns())) if column.formula else "?"
+    return DerivationError(
+        f"the formula for '{column.name}' could not be computed for {count:,} of "
+        f"{total:,} rows, but the column is not nullable. This usually means one of its "
+        f"inputs ({inputs}) is null for those rows. Either mark '{column.name}' nullable, "
+        f"or wrap the formula so it produces a value there — for example with "
+        f"'coalesce' or 'if_else'."
+    )
+
+
 def _cast_to_declared_type(values: pd.Series, column: Column) -> pd.Series:
+    """Coerce a computed column to its declared type.
+
+    A formula that cannot be evaluated for some rows is not silently filled in. If the
+    column is nullable the gap is preserved as a real missing value; if it is not, that
+    is a specification error and the caller is told which input caused it.
+    """
     from .spec import ColumnType
 
+    if column.type in (ColumnType.INTEGER, ColumnType.NUMBER):
+        numeric = pd.to_numeric(values, errors="coerce")
+
+        # Infinity is never a usable result and would otherwise ride out to the CSV.
+        as_float = numeric.to_numpy(dtype="float64", na_value=np.nan)
+        if np.isinf(as_float).any():
+            raise DerivationError(
+                f"the formula for '{column.name}' produced infinite values; check for a "
+                "division by a near-zero quantity"
+            )
+
+        missing = numeric.isna()
+        if missing.any() and not column.nullable:
+            raise _missing_value_error(column, int(missing.sum()), len(numeric))
+
+        if column.minimum is not None or column.maximum is not None:
+            numeric = numeric.clip(lower=column.minimum, upper=column.maximum)
+
+        if column.type == ColumnType.NUMBER:
+            return numeric.astype("Float64") if missing.any() else numeric.astype(float)
+
+        rounded = np.round(numeric)
+        # int64 cannot hold a missing value, so a nullable column uses pandas' Int64.
+        return rounded.astype("Int64") if missing.any() else rounded.astype("int64")
+
     if column.type == ColumnType.BOOLEAN:
+        missing = values.isna()
+        if missing.any():
+            # NaN is truthy, so a plain astype(bool) would turn every uncomputable row
+            # into a confident True.
+            if not column.nullable:
+                raise _missing_value_error(column, int(missing.sum()), len(values))
+            return values.astype("boolean")
         return values.astype(bool)
-    if column.type == ColumnType.INTEGER:
-        numeric = pd.to_numeric(values, errors="coerce")
-        if column.minimum is not None or column.maximum is not None:
-            numeric = numeric.clip(lower=column.minimum, upper=column.maximum)
-        return np.round(numeric).astype("int64")
-    if column.type == ColumnType.NUMBER:
-        numeric = pd.to_numeric(values, errors="coerce")
-        if column.minimum is not None or column.maximum is not None:
-            numeric = numeric.clip(lower=column.minimum, upper=column.maximum)
-        return numeric.astype(float)
+
     return values

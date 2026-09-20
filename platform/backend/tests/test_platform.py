@@ -613,3 +613,193 @@ def test_derived_column_cannot_contradict_its_inputs():
     frame = run(spec, sources={"shifts": source}, rows=300)["frames"]["shifts"]
     expected = np.clip(np.round(frame["shift_hours"] - 6), 0, None)
     assert (frame["extra_hours"] == expected).all()
+
+
+# --- derived columns over incomplete inputs --------------------------------------
+
+
+def _nullable_derived_table(nullable: bool) -> Table:
+    """An integer column derived from a span whose end is sometimes missing."""
+    return Table(
+        name="sessions",
+        columns=[
+            Column(name="start", type=ColumnType.TIMESTAMP, role=SemanticRole.RULE,
+                   rule=Rule(kind=RuleKind.TIMESTAMP_RANGE)),
+            Column(name="end", type=ColumnType.TIMESTAMP, role=SemanticRole.RULE,
+                   nullable=True, null_fraction=0.25,
+                   rule=Rule(kind=RuleKind.TIMESTAMP_RANGE)),
+            Column(
+                name="extra_hours",
+                type=ColumnType.INTEGER,
+                role=SemanticRole.DERIVED,
+                nullable=nullable,
+                formula=Expr.model_validate(
+                    {
+                        "op": "round",
+                        "args": [
+                            {
+                                "op": "sub",
+                                "args": [
+                                    {"op": "duration_hours", "args": [{"col": "start"}, {"col": "end"}]},
+                                    {"const": 6},
+                                ],
+                            }
+                        ],
+                    }
+                ),
+            ),
+        ],
+    )
+
+
+def _frame_with_open_session() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "start": pd.to_datetime(["2026-01-01T05:00:00Z", "2026-01-02T05:00:00Z"]),
+            "end": pd.to_datetime(["2026-01-01T17:00:00Z", None]),
+            "extra_hours": [0, 0],
+        }
+    )
+
+
+def test_uncomputable_integer_formula_reports_the_cause():
+    """A missing input must not surface as a pandas cast failure.
+
+    Regression: an unclosed session leaves `end` null, the duration is NaN, and
+    int64 cannot hold it. The old code raised IntCastingNaNError from deep inside
+    pandas, naming neither the column nor the input responsible.
+    """
+    with pytest.raises(DerivationError) as exc:
+        apply_derived(_frame_with_open_session(), _nullable_derived_table(nullable=False))
+
+    message = str(exc.value)
+    assert "extra_hours" in message
+    assert "not nullable" in message
+    assert "end" in message  # names the input that caused it
+
+
+def test_nullable_derived_integer_keeps_the_gap():
+    result, _ = apply_derived(_frame_with_open_session(), _nullable_derived_table(nullable=True))
+    assert str(result["extra_hours"].dtype) == "Int64"
+    assert result["extra_hours"].isna().sum() == 1
+    assert result["extra_hours"].iloc[0] == 6
+
+
+def test_uncomputable_boolean_formula_is_not_silently_true():
+    """NaN is truthy, so astype(bool) would turn every uncomputable row into True."""
+    table = Table(
+        name="t",
+        columns=[
+            Column(name="value", type=ColumnType.NUMBER, role=SemanticRole.RULE,
+                   nullable=True, rule=Rule(kind=RuleKind.NUMBER_RANGE)),
+            Column(name="flag", type=ColumnType.BOOLEAN, role=SemanticRole.DERIVED,
+                   formula=Expr.model_validate(
+                       {"op": "coalesce", "args": [{"col": "value"}]})),
+        ],
+    )
+    frame = pd.DataFrame({"value": [1.0, None], "flag": [False, False]})
+    with pytest.raises(DerivationError, match="flag"):
+        apply_derived(frame, table)
+
+
+def test_infinite_derived_value_is_rejected():
+    table = Table(
+        name="t",
+        columns=[
+            Column(name="a", type=ColumnType.NUMBER, role=SemanticRole.RULE,
+                   rule=Rule(kind=RuleKind.NUMBER_RANGE)),
+            Column(name="b", type=ColumnType.NUMBER, role=SemanticRole.DERIVED,
+                   formula=Expr.model_validate({"op": "mul", "args": [{"col": "a"}, {"const": 1e308}]})),
+        ],
+    )
+    frame = pd.DataFrame({"a": [1e308], "b": [0.0]})
+    with pytest.raises(DerivationError, match="infinite"):
+        apply_derived(frame, table)
+
+
+def test_profiler_marks_a_gappy_formula_nullable():
+    """The profiler must test its own proposals against the source."""
+    rng = np.random.default_rng(41)
+    start = pd.to_datetime("2026-01-01T05:00:00Z") + pd.to_timedelta(
+        rng.integers(0, 500, 400), unit="D"
+    )
+    duration = rng.integers(7, 18, 400)
+    end = start + pd.to_timedelta(duration, unit="h")
+    end = pd.Series(end)
+    end.iloc[:20] = pd.NaT  # unclosed sessions
+
+    frame = pd.DataFrame(
+        {
+            "start": start,
+            "end": end,
+            "extra_hours": (duration - 6).astype(int),
+        }
+    )
+    table, report = profile_csv(frame, "sessions")
+    extra = table.column("extra_hours")
+    assert extra.role == SemanticRole.DERIVED
+    assert extra.nullable is True
+    assert any(n["kind"] == "formula_gap" for n in report["notes"])
+
+    # And the proposal it just verified must actually run.
+    result, _ = apply_derived(frame, table)
+    assert result["extra_hours"].isna().sum() == 20
+
+
+def test_engine_rejects_column_types_it_cannot_model():
+    """Unsupported input must fail at validation, not deep inside an engine.
+
+    Regression: raw timestamp columns were handed to the tree-based engine, which
+    declares no support for them. The request ran for minutes before failing.
+    """
+    frame = pd.DataFrame(
+        {
+            "when": pd.date_range("2026-01-01", periods=120, freq="h"),
+            "amount": np.arange(120, dtype=float),
+        }
+    )
+    table, _ = profile_csv(frame, "events")
+    assert table.column("when").type == ColumnType.TIMESTAMP
+
+    spec = SyntheticDataSpec(
+        name="events",
+        mode=Mode.LEARNED_TABLE,
+        purpose=Purpose.ML_DEVELOPMENT,
+        engine="arf",
+        tables=[table],
+    )
+    result = validate(spec, get_engine("arf").capabilities())
+    assert not result.ok
+    finding = next(f for f in result.errors if f.code == "unsupported_column_type")
+    assert "when" in finding.scope
+    assert "timestamp" in finding.message
+
+
+def test_capability_check_ignores_columns_the_engine_never_sees():
+    """A derived timestamp is computed by the platform, so it is not the engine's problem."""
+    table = Table(
+        name="events",
+        columns=[
+            Column(name="amount", type=ColumnType.NUMBER, role=SemanticRole.LEARNED),
+            Column(
+                name="when",
+                type=ColumnType.TIMESTAMP,
+                role=SemanticRole.DERIVED,
+                formula=Expr.model_validate(
+                    {"op": "add_hours", "args": [{"col": "anchor"}, {"col": "amount"}]}
+                ),
+            ),
+            Column(name="anchor", type=ColumnType.TIMESTAMP, role=SemanticRole.CONSTANT,
+                   constant_value="2026-01-01T00:00:00Z"),
+        ],
+        source={"kind": "uploaded_csv"},
+    )
+    spec = SyntheticDataSpec(
+        name="events",
+        mode=Mode.LEARNED_TABLE,
+        purpose=Purpose.ML_DEVELOPMENT,
+        engine="arf",
+        tables=[table],
+    )
+    result = validate(spec, get_engine("arf").capabilities())
+    assert not any(f.code == "unsupported_column_type" for f in result.errors)

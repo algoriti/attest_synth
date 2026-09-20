@@ -119,6 +119,7 @@ export default function App() {
             spec={spec}
             setSpec={setSpec}
             profile={profile}
+            setProfile={setProfile}
             sourcePreview={sourcePreview}
             validation={validation}
             engines={engines}
@@ -351,6 +352,7 @@ function ReviewView({
   spec,
   setSpec,
   profile,
+  setProfile,
   sourcePreview,
   validation,
   engines,
@@ -362,6 +364,7 @@ function ReviewView({
   spec: Spec;
   setSpec: (spec: Spec) => void;
   profile: ProfileReport | null;
+  setProfile: (profile: ProfileReport | null) => void;
   sourcePreview: Preview | null;
   validation: ValidationResult | null;
   engines: Engine[];
@@ -372,6 +375,27 @@ function ReviewView({
 }) {
   const [rows, setRows] = useState<number>(spec.tables[0]?.rows ?? 1000);
   const [starting, setStarting] = useState(false);
+  const [tzOffset, setTzOffset] = useState(0);
+  const [reprofiling, setReprofiling] = useState(false);
+
+  // Threshold rules are only discoverable against the clock the policy is written in:
+  // the same attendance cutoff reads as 07:45 at UTC+3 and 04:45 at UTC.
+  const reprofile = async (offset: number) => {
+    if (!uploadId) return;
+    setTzOffset(offset);
+    setReprofiling(true);
+    try {
+      const result = await api.reprofile(uploadId, offset);
+      setProfile(result.profile);
+      const next: Spec = { ...spec, tables: [result.proposed_table, ...spec.tables.slice(1)] };
+      setSpec(next);
+      await onValidate(next);
+    } catch (exc) {
+      onError(String(exc));
+    } finally {
+      setReprofiling(false);
+    }
+  };
 
   const derivedNotes = useMemo(
     () => (profile?.notes ?? []).filter((n) => n.kind === "derived_candidate" && n.applied),
@@ -421,7 +445,29 @@ function ReviewView({
       </div>
 
       {derivedNotes.length > 0 ? (
-        <Card title="Business rules found in your data" sub="Proposed as computed columns">
+        <Card
+          title="Business rules found in your data"
+          sub="Proposed as computed columns"
+          actions={
+            uploadId ? (
+              <label className="row" style={{ gap: 7 }}>
+                <span className="small secondary">Site timezone</span>
+                <select
+                  value={tzOffset}
+                  disabled={reprofiling}
+                  onChange={(e) => void reprofile(Number(e.target.value))}
+                >
+                  {TIMEZONE_OFFSETS.map((offset) => (
+                    <option key={offset} value={offset}>
+                      {offset === 0 ? "UTC" : `UTC${offset > 0 ? "+" : ""}${offset}`}
+                    </option>
+                  ))}
+                </select>
+                {reprofiling ? <Spinner /> : null}
+              </label>
+            ) : undefined
+          }
+        >
           <Notice tone="accent" title="These columns are formulas, not behaviour">
             Left as ordinary columns, a generator reproduces their frequency while contradicting the
             columns they are computed from — a six-hour shift stamped with nine hours of overtime.
@@ -682,6 +728,8 @@ function ReviewView({
     </>
   );
 }
+
+const TIMEZONE_OFFSETS = [-8, -5, -3, 0, 1, 2, 3, 4, 5.5, 7, 8, 9, 10];
 
 const ROLE_EXPLANATION: Record<string, string> = {
   identifier: "Regenerated; never copied from the source",

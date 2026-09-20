@@ -530,3 +530,28 @@ def _validate_capabilities(spec: SyntheticDataSpec, caps: dict, result: Validati
                             table.name,
                         )
                     )
+
+    # Only columns an engine actually models need to be a type it supports; the rest
+    # are filled by the platform. Without this check a tree-based engine is handed raw
+    # timestamps and either fails deep inside its own fit or runs for a very long time
+    # before doing so.
+    supported_types = set(caps.get("supported_types", []))
+    if supported_types:
+        modelled_roles = {SemanticRole.LEARNED, SemanticRole.RULE}
+        for table in spec.tables:
+            for column in table.columns:
+                if column.role not in modelled_roles:
+                    continue
+                if column.type.value in supported_types:
+                    continue
+                result.findings.append(
+                    Finding(
+                        Severity.ERROR,
+                        "unsupported_column_type",
+                        f"Engine '{caps.get('name', '?')}' cannot model a "
+                        f"'{column.type.value}' column, so '{column.name}' has to be "
+                        "handled another way — derive it from a supported column, give "
+                        "it an explicit rule, or choose a different engine.",
+                        f"{table.name}.{column.name}",
+                    )
+                )
