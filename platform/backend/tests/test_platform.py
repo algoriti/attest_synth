@@ -1,0 +1,557 @@
+"""Tests for the specification, validator, derivation, engines and pipeline."""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from synthetic_platform.derive import DerivationError, apply_derived, derivation_order
+from synthetic_platform.engines import available_engines, get_engine
+from synthetic_platform.engines.relational import (
+    RelationalRuleEngine,
+    generation_order,
+    referential_integrity,
+)
+from synthetic_platform.evaluate import check_constraints
+from synthetic_platform.pipeline import PipelineError, run
+from synthetic_platform.profile import profile_csv
+from synthetic_platform.spec import (
+    Column,
+    ColumnType,
+    Constraint,
+    ConstraintOperator,
+    Evaluation,
+    Expr,
+    Mode,
+    Origin,
+    PrivacyIntent,
+    Provenance,
+    Purpose,
+    Relationship,
+    Rule,
+    RuleKind,
+    SemanticRole,
+    SyntheticDataSpec,
+    Table,
+)
+from synthetic_platform.validator import Severity, validate
+
+
+# --- helpers ---------------------------------------------------------------------
+
+
+def simple_table(**kwargs) -> Table:
+    return Table(
+        name="orders",
+        rows=50,
+        primary_key="order_id",
+        columns=[
+            Column(
+                name="order_id",
+                type=ColumnType.STRING,
+                role=SemanticRole.IDENTIFIER,
+                rule=Rule(kind=RuleKind.SEQUENCE, prefix="ORD-"),
+            ),
+            Column(
+                name="quantity",
+                type=ColumnType.INTEGER,
+                role=SemanticRole.RULE,
+                rule=Rule(kind=RuleKind.INTEGER_RANGE, start=1, end=10),
+                minimum=1,
+                maximum=10,
+            ),
+            Column(
+                name="unit_price_cents",
+                type=ColumnType.INTEGER,
+                role=SemanticRole.RULE,
+                rule=Rule(kind=RuleKind.INTEGER_RANGE, start=100, end=20000),
+                minimum=100,
+                maximum=20000,
+            ),
+            Column(
+                name="total_cents",
+                type=ColumnType.INTEGER,
+                role=SemanticRole.DERIVED,
+                formula=Expr.model_validate(
+                    {"op": "mul", "args": [{"col": "quantity"}, {"col": "unit_price_cents"}]}
+                ),
+            ),
+        ],
+        constraints=[
+            Constraint(operator=ConstraintOperator.UNIQUE, columns=["order_id"]),
+            Constraint(
+                operator=ConstraintOperator.PRODUCT_EQUALS,
+                columns=["quantity", "unit_price_cents", "total_cents"],
+            ),
+        ],
+        **kwargs,
+    )
+
+
+def simple_spec(**kwargs) -> SyntheticDataSpec:
+    defaults = dict(
+        name="orders_demo",
+        mode=Mode.SCHEMA_RULES,
+        purpose=Purpose.SOFTWARE_TESTING,
+        tables=[simple_table()],
+    )
+    defaults.update(kwargs)
+    return SyntheticDataSpec(**defaults)
+
+
+# --- spec model ------------------------------------------------------------------
+
+
+def test_derived_column_requires_formula():
+    with pytest.raises(ValueError, match="needs a formula"):
+        Column(name="x", type=ColumnType.INTEGER, role=SemanticRole.DERIVED)
+
+
+def test_rule_column_requires_rule():
+    with pytest.raises(ValueError, match="needs a rule"):
+        Column(name="x", type=ColumnType.INTEGER, role=SemanticRole.RULE)
+
+
+def test_expression_rejects_unknown_operator():
+    with pytest.raises(ValueError, match="unknown operator"):
+        Expr.model_validate({"op": "exec", "args": []})
+
+
+def test_expression_needs_exactly_one_form():
+    with pytest.raises(ValueError, match="exactly one"):
+        Expr.model_validate({"op": "add", "col": "x"})
+
+
+def test_minimum_above_maximum_is_rejected():
+    with pytest.raises(ValueError, match="minimum above maximum"):
+        Column(name="x", type=ColumnType.INTEGER, minimum=10, maximum=1)
+
+
+def test_open_assumptions_lists_unconfirmed_claims():
+    table = simple_table()
+    table.columns[1].provenance = Provenance(
+        origin=Origin.ASSISTANT_PROPOSED, detail="guessed range"
+    )
+    spec = simple_spec(tables=[table])
+    assumptions = spec.open_assumptions()
+    assert any(a["scope"] == "orders.quantity" for a in assumptions)
+
+
+# --- validator -------------------------------------------------------------------
+
+
+def test_valid_spec_passes():
+    assert validate(simple_spec()).ok
+
+
+def test_unknown_constraint_column_is_an_error():
+    table = simple_table()
+    table.constraints.append(
+        Constraint(operator=ConstraintOperator.UNIQUE, columns=["nope"])
+    )
+    result = validate(simple_spec(tables=[table]))
+    assert not result.ok
+    assert any(f.code == "unknown_constraint_column" for f in result.errors)
+
+
+def test_constraint_arity_is_enforced():
+    table = simple_table()
+    table.constraints.append(
+        Constraint(operator=ConstraintOperator.PRODUCT_EQUALS, columns=["quantity"])
+    )
+    result = validate(simple_spec(tables=[table]))
+    assert any(f.code == "constraint_arity" for f in result.errors)
+
+
+def test_formula_referencing_unknown_column_is_rejected():
+    table = simple_table()
+    table.columns[3].formula = Expr.model_validate({"op": "mul", "args": [{"col": "ghost"}, {"const": 2}]})
+    result = validate(simple_spec(tables=[table]))
+    assert any(f.code == "formula_unknown_column" for f in result.errors)
+
+
+def test_learned_column_without_source_is_rejected():
+    table = simple_table()
+    table.columns[1].role = SemanticRole.LEARNED
+    result = validate(simple_spec(tables=[table]))
+    assert any(f.code == "learned_without_source" for f in result.errors)
+
+
+def test_release_claim_cannot_be_permitted():
+    spec = simple_spec(privacy=PrivacyIntent(release_claim_permitted=True))
+    result = validate(spec)
+    assert any(f.code == "unsupported_release_claim" for f in result.errors)
+
+
+def test_differential_privacy_is_rejected_because_unimplemented():
+    spec = simple_spec(privacy=PrivacyIntent(mechanism="differential_privacy", epsilon=1.0))
+    result = validate(spec)
+    assert any(f.code == "dp_not_implemented" for f in result.errors)
+
+
+def test_fidelity_without_source_is_rejected():
+    spec = simple_spec(evaluation=Evaluation(checks=["fidelity"]))
+    result = validate(spec)
+    assert any(f.code == "fidelity_without_source" for f in result.errors)
+
+
+def test_single_table_engine_cannot_accept_relational_request():
+    spec = relational_spec()
+    caps = get_engine("rules").capabilities()
+    result = validate(spec, caps)
+    assert any(f.code == "engine_lacks_multi_table" for f in result.errors)
+
+
+def test_derivation_cycle_is_detected():
+    table = simple_table()
+    table.columns.append(
+        Column(
+            name="a",
+            type=ColumnType.INTEGER,
+            role=SemanticRole.DERIVED,
+            formula=Expr.model_validate({"op": "add", "args": [{"col": "b"}]}),
+        )
+    )
+    table.columns.append(
+        Column(
+            name="b",
+            type=ColumnType.INTEGER,
+            role=SemanticRole.DERIVED,
+            formula=Expr.model_validate({"op": "add", "args": [{"col": "a"}]}),
+        )
+    )
+    result = validate(simple_spec(tables=[table]))
+    assert any(f.code == "derivation_cycle" for f in result.errors)
+
+
+def test_sensitive_learned_column_warns():
+    frame = pd.DataFrame({"salary": np.arange(100), "dept": ["a", "b"] * 50})
+    table, _ = profile_csv(frame, "people")
+    table.column("salary").sensitive = True
+    spec = SyntheticDataSpec(
+        name="people",
+        mode=Mode.LEARNED_TABLE,
+        purpose=Purpose.ML_DEVELOPMENT,
+        tables=[table],
+    )
+    result = validate(spec)
+    assert any(f.code == "sensitive_learned" for f in result.warnings)
+
+
+# --- derivation ------------------------------------------------------------------
+
+
+def test_derived_columns_are_computed_not_generated():
+    frame = pd.DataFrame({"quantity": [2, 3], "unit_price_cents": [150, 200], "total_cents": [0, 0]})
+    table = simple_table()
+    result, trace = apply_derived(frame, table)
+    assert result["total_cents"].tolist() == [300, 600]
+    assert trace[0]["column"] == "total_cents"
+    assert trace[0]["depends_on"] == ["quantity", "unit_price_cents"]
+
+
+def test_derivation_order_respects_dependencies():
+    table = Table(
+        name="t",
+        columns=[
+            Column(name="base", type=ColumnType.INTEGER, role=SemanticRole.RULE,
+                   rule=Rule(kind=RuleKind.INTEGER_RANGE, start=1, end=5)),
+            Column(name="second", type=ColumnType.INTEGER, role=SemanticRole.DERIVED,
+                   formula=Expr.model_validate({"op": "add", "args": [{"col": "first"}, {"const": 1}]})),
+            Column(name="first", type=ColumnType.INTEGER, role=SemanticRole.DERIVED,
+                   formula=Expr.model_validate({"op": "add", "args": [{"col": "base"}, {"const": 1}]})),
+        ],
+    )
+    assert [c.name for c in derivation_order(table)] == ["first", "second"]
+
+
+def test_division_by_zero_is_reported_not_silenced():
+    frame = pd.DataFrame({"a": [1.0], "b": [0.0], "c": [0.0]})
+    table = Table(
+        name="t",
+        columns=[
+            Column(name="a", type=ColumnType.NUMBER, role=SemanticRole.RULE,
+                   rule=Rule(kind=RuleKind.NUMBER_RANGE)),
+            Column(name="b", type=ColumnType.NUMBER, role=SemanticRole.RULE,
+                   rule=Rule(kind=RuleKind.NUMBER_RANGE)),
+            Column(name="c", type=ColumnType.NUMBER, role=SemanticRole.DERIVED,
+                   formula=Expr.model_validate({"op": "div", "args": [{"col": "a"}, {"col": "b"}]})),
+        ],
+    )
+    with pytest.raises(DerivationError, match="division by zero"):
+        apply_derived(frame, table)
+
+
+def test_time_of_day_respects_timezone_offset():
+    frame = pd.DataFrame({"t": pd.to_datetime(["2024-01-01T05:00:00Z"]), "late": [False]})
+    table = Table(
+        name="t",
+        columns=[
+            Column(name="t", type=ColumnType.TIMESTAMP, role=SemanticRole.RULE,
+                   rule=Rule(kind=RuleKind.TIMESTAMP_RANGE)),
+            Column(name="late", type=ColumnType.BOOLEAN, role=SemanticRole.DERIVED,
+                   formula=Expr.model_validate({
+                       "op": "gt",
+                       "args": [
+                           {"op": "time_of_day", "args": [{"col": "t"}], "tz_offset_hours": 3.0},
+                           {"const": 7.75},
+                       ],
+                   })),
+        ],
+    )
+    result, _ = apply_derived(frame, table)
+    # 05:00 UTC is 08:00 local, which is after the 07:45 cutoff.
+    assert bool(result["late"].iloc[0]) is True
+
+
+# --- engines and pipeline --------------------------------------------------------
+
+
+def test_every_engine_declares_capabilities():
+    for caps in available_engines():
+        assert {"name", "multi_table", "learns_from_records", "schema_only"} <= set(caps)
+
+
+def test_rules_pipeline_generates_and_passes_constraints():
+    result = run(simple_spec(), rows=200)
+    frame = result["frames"]["orders"]
+    report = result["report"]
+
+    assert len(frame) == 200
+    assert report["summary"]["all_constraints_passed"]
+    assert (frame["total_cents"] == frame["quantity"] * frame["unit_price_cents"]).all()
+    assert frame["order_id"].is_unique
+
+
+def test_report_states_no_privacy_guarantee():
+    report = run(simple_spec(), rows=20)["report"]
+    assert report["privacy"]["release_claim_permitted"] is False
+    statement = report["privacy"]["statement"]
+    assert "no formal privacy mechanism" in statement
+    assert "Nothing in this report supports a claim" in statement
+
+
+def test_row_count_is_reported_exactly():
+    report = run(simple_spec(), rows=137)["report"]
+    table_block = report["tables"][0]
+    assert table_block["requested_rows"] == 137
+    assert table_block["generated_rows"] == 137
+    assert table_block["complete"] is True
+
+
+def test_invalid_spec_is_rejected_before_generation():
+    table = simple_table()
+    table.constraints.append(Constraint(operator=ConstraintOperator.UNIQUE, columns=["ghost"]))
+    with pytest.raises(PipelineError) as exc:
+        run(simple_spec(tables=[table]), rows=10)
+    assert any(f["code"] == "unknown_constraint_column" for f in exc.value.findings)
+
+
+def test_identifiers_are_regenerated_not_copied():
+    source = pd.DataFrame(
+        {
+            "user_id": [f"U{i}" for i in range(200)],
+            "score": np.random.default_rng(0).integers(0, 100, 200),
+            "grade": ["a", "b", "c", "d"] * 50,
+        }
+    )
+    table, _ = profile_csv(source, "people")
+    assert table.column("user_id").role == SemanticRole.IDENTIFIER
+
+    spec = SyntheticDataSpec(
+        name="people",
+        mode=Mode.LEARNED_TABLE,
+        purpose=Purpose.ML_DEVELOPMENT,
+        engine="independent",
+        tables=[table],
+    )
+    frame = run(spec, sources={"people": source}, rows=100)["frames"]["people"]
+    assert not set(frame["user_id"]) & set(source["user_id"])
+
+
+def test_seed_makes_generation_reproducible():
+    a = run(simple_spec(seed=7), rows=50)["frames"]["orders"]
+    b = run(simple_spec(seed=7), rows=50)["frames"]["orders"]
+    pd.testing.assert_frame_equal(a, b)
+
+
+# --- constraint checking ---------------------------------------------------------
+
+
+def test_constraint_checker_detects_violations():
+    frame = pd.DataFrame({"a": [1, 1], "b": [5, 1], "c": [5, 5]})
+    table = Table(
+        name="t",
+        columns=[
+            Column(name=n, type=ColumnType.INTEGER, role=SemanticRole.RULE,
+                   rule=Rule(kind=RuleKind.INTEGER_RANGE))
+            for n in ("a", "b", "c")
+        ],
+        constraints=[
+            Constraint(operator=ConstraintOperator.UNIQUE, columns=["a"]),
+            Constraint(operator=ConstraintOperator.PRODUCT_EQUALS, columns=["a", "b", "c"]),
+        ],
+    )
+    results = check_constraints(frame, table)
+    assert results[0]["passed"] is False and results[0]["failing_rows"] == 1
+    assert results[1]["passed"] is False and results[1]["failing_rows"] == 1
+
+
+# --- profiling -------------------------------------------------------------------
+
+
+def test_profiler_flags_empty_and_constant_columns():
+    frame = pd.DataFrame(
+        {"always_null": [None] * 100, "always_same": ["x"] * 100, "varies": list(range(100))}
+    )
+    table, report = profile_csv(frame, "t")
+    assert table.column("always_null").role == SemanticRole.EMPTY
+    assert table.column("always_same").role == SemanticRole.CONSTANT
+    assert report["role_summary"]["empty"] == 1
+
+
+def test_profiler_detects_product_relationship():
+    rng = np.random.default_rng(3)
+    quantity = rng.integers(1, 10, 300)
+    price = rng.integers(100, 5000, 300)
+    frame = pd.DataFrame(
+        {"quantity": quantity, "unit_price": price, "total": quantity * price}
+    )
+    table, _ = profile_csv(frame, "orders")
+    assert table.column("total").role == SemanticRole.DERIVED
+
+
+def test_profiler_detects_null_flag_relationship():
+    rng = np.random.default_rng(5)
+    values = rng.normal(size=400)
+    missing = rng.random(400) < 0.2
+    frame = pd.DataFrame(
+        {
+            "measurement": np.where(missing, np.nan, values),
+            "is_missing": missing,
+            "other": rng.integers(0, 50, 400),
+        }
+    )
+    table, _ = profile_csv(frame, "t")
+    assert table.column("is_missing").role == SemanticRole.DERIVED
+
+
+def test_profiler_applies_only_the_strongest_formula_per_column():
+    rng = np.random.default_rng(11)
+    quantity = rng.integers(1, 10, 300)
+    price = rng.integers(100, 5000, 300)
+    frame = pd.DataFrame(
+        {"quantity": quantity, "unit_price": price, "total": quantity * price}
+    )
+    _, report = profile_csv(frame, "orders")
+    applied = [n for n in report["notes"] if n.get("applied")]
+    assert len({n["column"] for n in applied}) == len(applied)
+
+
+# --- relational ------------------------------------------------------------------
+
+
+def relational_spec() -> SyntheticDataSpec:
+    employees = Table(
+        name="employees",
+        rows=25,
+        primary_key="employee_id",
+        columns=[
+            Column(name="employee_id", type=ColumnType.STRING, role=SemanticRole.IDENTIFIER,
+                   rule=Rule(kind=RuleKind.SEQUENCE, prefix="EMP-")),
+            Column(name="department", type=ColumnType.CATEGORY, role=SemanticRole.RULE,
+                   rule=Rule(kind=RuleKind.CHOICE, values=["ops", "finance", "it"])),
+        ],
+    )
+    attendance = Table(
+        name="attendance",
+        primary_key="attendance_id",
+        columns=[
+            Column(name="attendance_id", type=ColumnType.UUID, role=SemanticRole.IDENTIFIER),
+            Column(name="employee_id", type=ColumnType.STRING, role=SemanticRole.RULE,
+                   rule=Rule(kind=RuleKind.SEQUENCE, prefix="TMP-")),
+            Column(name="shift_hours", type=ColumnType.NUMBER, role=SemanticRole.RULE,
+                   rule=Rule(kind=RuleKind.NUMBER_RANGE, start=4, end=12, decimals=2)),
+        ],
+    )
+    return SyntheticDataSpec(
+        name="employee_relational",
+        mode=Mode.RELATIONAL_RULES,
+        purpose=Purpose.SOFTWARE_TESTING,
+        engine="relational_rules",
+        tables=[employees, attendance],
+        relationships=[
+            Relationship(
+                parent_table="employees",
+                parent_key="employee_id",
+                child_table="attendance",
+                child_key="employee_id",
+                child_count_min=3,
+                child_count_max=8,
+            )
+        ],
+    )
+
+
+def test_relational_generation_order_puts_parents_first():
+    assert generation_order(relational_spec()) == ["employees", "attendance"]
+
+
+def test_relational_generation_has_no_orphans():
+    result = run(relational_spec())
+    frames = result["frames"]
+    assert set(frames) == {"employees", "attendance"}
+
+    integrity = result["report"]["evaluation"]["referential_integrity"]
+    assert integrity[0]["orphan_rows"] == 0
+    assert integrity[0]["integrity"] == 1.0
+
+    valid = set(frames["employees"]["employee_id"])
+    assert set(frames["attendance"]["employee_id"]) <= valid
+
+
+def test_relational_child_counts_respect_declared_range():
+    frames = run(relational_spec())["frames"]
+    counts = frames["attendance"].groupby("employee_id").size()
+    assert counts.min() >= 3
+    assert counts.max() <= 8
+
+
+def test_relational_report_includes_cardinality():
+    report = run(relational_spec())["report"]
+    cardinality = report["evaluation"]["cardinality"]
+    assert cardinality[0]["synthetic"]["parents"] == 25
+
+
+def test_relationship_cycle_is_rejected():
+    spec = relational_spec()
+    spec.relationships.append(
+        Relationship(
+            parent_table="attendance",
+            parent_key="attendance_id",
+            child_table="employees",
+            child_key="employee_id",
+        )
+    )
+    result = validate(spec)
+    assert any(f.code == "relationship_cycle" for f in result.errors)
+
+
+def test_unknown_parent_table_is_rejected():
+    spec = relational_spec()
+    spec.relationships[0].parent_table = "ghost"
+    result = validate(spec)
+    assert any(f.code == "unknown_parent_table" for f in result.errors)
+
+
+def test_referential_integrity_detects_injected_orphan():
+    spec = relational_spec()
+    frames = run(spec)["frames"]
+    frames["attendance"].loc[0, "employee_id"] = "EMP-NOT-REAL"
+    integrity = referential_integrity(spec, frames)
+    assert integrity[0]["orphan_rows"] == 1

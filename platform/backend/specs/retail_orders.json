@@ -1,0 +1,157 @@
+{
+  "spec_version": "2.0",
+  "name": "retail_orders",
+  "mode": "schema_rules",
+  "purpose": "software_testing",
+  "description": "Test orders with a total that always matches quantity times unit price.",
+  "seed": 2026,
+  "tables": [
+    {
+      "name": "orders",
+      "rows": 1000,
+      "primary_key": "order_id",
+      "columns": [
+        {
+          "name": "order_id",
+          "type": "string",
+          "role": "identifier",
+          "rule": {
+            "kind": "sequence",
+            "prefix": "ORD-"
+          },
+          "provenance": {
+            "origin": "user",
+            "detail": "sequential order reference",
+            "confirmed": true
+          }
+        },
+        {
+          "name": "customer_name",
+          "type": "string",
+          "role": "rule",
+          "rule": {
+            "kind": "faker",
+            "provider": "name"
+          },
+          "sensitive": true,
+          "provenance": {
+            "origin": "user",
+            "detail": "display name only",
+            "confirmed": true
+          }
+        },
+        {
+          "name": "quantity",
+          "type": "integer",
+          "role": "rule",
+          "minimum": 1,
+          "maximum": 10,
+          "rule": {
+            "kind": "integer_range",
+            "start": 1,
+            "end": 10
+          },
+          "provenance": {
+            "origin": "user",
+            "detail": "assumed basket size",
+            "confirmed": true
+          }
+        },
+        {
+          "name": "unit_price_cents",
+          "type": "integer",
+          "role": "rule",
+          "minimum": 100,
+          "maximum": 20000,
+          "rule": {
+            "kind": "integer_range",
+            "start": 100,
+            "end": 20000
+          },
+          "provenance": {
+            "origin": "user",
+            "detail": "assumed price band",
+            "confirmed": true
+          }
+        },
+        {
+          "name": "total_cents",
+          "type": "integer",
+          "role": "derived",
+          "description": "quantity x unit price",
+          "formula": {
+            "op": "mul",
+            "args": [
+              {
+                "col": "quantity"
+              },
+              {
+                "col": "unit_price_cents"
+              }
+            ]
+          },
+          "provenance": {
+            "origin": "user",
+            "detail": "arithmetic identity",
+            "confirmed": true
+          }
+        },
+        {
+          "name": "ordered_at",
+          "type": "timestamp",
+          "role": "rule",
+          "rule": {
+            "kind": "timestamp_range",
+            "start": "2026-01-01",
+            "end": "2026-06-30"
+          },
+          "provenance": {
+            "origin": "user",
+            "detail": "first half of 2026",
+            "confirmed": true
+          }
+        }
+      ],
+      "constraints": [
+        {
+          "operator": "unique",
+          "columns": [
+            "order_id"
+          ],
+          "description": "Order references do not repeat"
+        },
+        {
+          "operator": "product_equals",
+          "columns": [
+            "quantity",
+            "unit_price_cents",
+            "total_cents"
+          ],
+          "description": "Line total equals quantity times unit price"
+        },
+        {
+          "operator": "range",
+          "columns": [
+            "quantity"
+          ],
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Basket size stays within the assumed band"
+        }
+      ],
+      "source": {
+        "kind": "none"
+      }
+    }
+  ],
+  "privacy": {
+    "mechanism": "none",
+    "notes": "No real records used; names come from Faker."
+  },
+  "evaluation": {
+    "checks": [
+      "schema",
+      "constraints"
+    ]
+  }
+}

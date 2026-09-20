@@ -1,0 +1,119 @@
+{
+  "spec_version": "2.0",
+  "name": "sensor_readings",
+  "mode": "schema_rules",
+  "purpose": "scenario_simulation",
+  "description": "Temperature readings following an explicitly invented AR(1) process.",
+  "seed": 2026,
+  "tables": [
+    {
+      "name": "readings",
+      "rows": 1000,
+      "primary_key": "reading_id",
+      "columns": [
+        {
+          "name": "reading_id",
+          "type": "string",
+          "role": "identifier",
+          "rule": {
+            "kind": "sequence",
+            "prefix": "RDG-"
+          },
+          "provenance": {
+            "origin": "user",
+            "confirmed": true
+          }
+        },
+        {
+          "name": "sensor_id",
+          "type": "category",
+          "role": "rule",
+          "rule": {
+            "kind": "choice",
+            "values": [
+              "SENSOR-001",
+              "SENSOR-002",
+              "SENSOR-003"
+            ]
+          },
+          "provenance": {
+            "origin": "user",
+            "confirmed": true
+          }
+        },
+        {
+          "name": "temperature_c",
+          "type": "number",
+          "role": "rule",
+          "minimum": 10.0,
+          "maximum": 30.0,
+          "rule": {
+            "kind": "ar1",
+            "mean": 20.0,
+            "stddev": 0.3,
+            "phi": 0.9,
+            "decimals": 3
+          },
+          "description": "Invented autoregressive process, not a learned time series",
+          "provenance": {
+            "origin": "assistant_proposed",
+            "detail": "AR(1) with phi=0.9; a stated assumption"
+          }
+        },
+        {
+          "name": "above_threshold",
+          "type": "boolean",
+          "role": "derived",
+          "description": "reading above 25 C",
+          "formula": {
+            "op": "gt",
+            "args": [
+              {
+                "col": "temperature_c"
+              },
+              {
+                "const": 25.0
+              }
+            ]
+          },
+          "provenance": {
+            "origin": "user",
+            "detail": "alarm threshold",
+            "confirmed": true
+          }
+        }
+      ],
+      "constraints": [
+        {
+          "operator": "unique",
+          "columns": [
+            "reading_id"
+          ],
+          "description": "Reading identifiers do not repeat"
+        },
+        {
+          "operator": "range",
+          "columns": [
+            "temperature_c"
+          ],
+          "minimum": 10.0,
+          "maximum": 30.0,
+          "description": "Sensor operating range"
+        }
+      ],
+      "source": {
+        "kind": "none"
+      }
+    }
+  ],
+  "privacy": {
+    "mechanism": "none",
+    "notes": "Fully invented scenario."
+  },
+  "evaluation": {
+    "checks": [
+      "schema",
+      "constraints"
+    ]
+  }
+}

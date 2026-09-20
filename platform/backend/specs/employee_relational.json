@@ -1,0 +1,399 @@
+{
+  "spec_version": "2.0",
+  "name": "employee_relational",
+  "mode": "relational_rules",
+  "purpose": "software_testing",
+  "description": "Employees with attendance and project assignments. Referential integrity by construction.",
+  "seed": 2026,
+  "engine": "relational_rules",
+  "tables": [
+    {
+      "name": "employees",
+      "rows": 50,
+      "primary_key": "employee_id",
+      "columns": [
+        {
+          "name": "employee_id",
+          "type": "string",
+          "role": "identifier",
+          "rule": {
+            "kind": "sequence",
+            "prefix": "EMP-"
+          },
+          "provenance": {
+            "origin": "user",
+            "confirmed": true
+          }
+        },
+        {
+          "name": "department",
+          "type": "category",
+          "role": "rule",
+          "rule": {
+            "kind": "choice",
+            "values": [
+              "operations",
+              "finance",
+              "it",
+              "hr"
+            ],
+            "weights": [
+              0.4,
+              0.2,
+              0.3,
+              0.1
+            ]
+          },
+          "provenance": {
+            "origin": "assistant_proposed",
+            "detail": "invented department mix; confirm before use"
+          }
+        },
+        {
+          "name": "grade",
+          "type": "category",
+          "role": "rule",
+          "rule": {
+            "kind": "choice",
+            "values": [
+              "junior",
+              "mid",
+              "senior"
+            ]
+          },
+          "provenance": {
+            "origin": "assistant_proposed",
+            "detail": "invented grade mix; confirm before use"
+          }
+        }
+      ],
+      "constraints": [
+        {
+          "operator": "unique",
+          "columns": [
+            "employee_id"
+          ],
+          "description": "One row per employee"
+        }
+      ],
+      "source": {
+        "kind": "none"
+      }
+    },
+    {
+      "name": "attendance",
+      "primary_key": "attendance_id",
+      "columns": [
+        {
+          "name": "attendance_id",
+          "type": "uuid",
+          "role": "identifier",
+          "provenance": {
+            "origin": "user",
+            "confirmed": true
+          }
+        },
+        {
+          "name": "employee_id",
+          "type": "string",
+          "role": "rule",
+          "rule": {
+            "kind": "sequence",
+            "prefix": "TMP-"
+          },
+          "description": "Replaced by the relational key controller",
+          "provenance": {
+            "origin": "user",
+            "confirmed": true
+          }
+        },
+        {
+          "name": "clock_in_hour",
+          "type": "number",
+          "role": "rule",
+          "minimum": 4.0,
+          "maximum": 11.0,
+          "rule": {
+            "kind": "number_range",
+            "start": 4.0,
+            "end": 11.0,
+            "decimals": 2
+          },
+          "provenance": {
+            "origin": "assistant_proposed",
+            "detail": "invented arrival window; confirm before use"
+          }
+        },
+        {
+          "name": "shift_hours",
+          "type": "number",
+          "role": "rule",
+          "minimum": 0.0,
+          "maximum": 16.0,
+          "rule": {
+            "kind": "number_range",
+            "start": 5.0,
+            "end": 14.0,
+            "decimals": 2
+          },
+          "provenance": {
+            "origin": "assistant_proposed",
+            "detail": "invented shift length; confirm before use"
+          }
+        },
+        {
+          "name": "late_status",
+          "type": "boolean",
+          "role": "derived",
+          "description": "late when clock-in is after 07:45",
+          "formula": {
+            "op": "gt",
+            "args": [
+              {
+                "col": "clock_in_hour"
+              },
+              {
+                "const": 7.75
+              }
+            ]
+          },
+          "provenance": {
+            "origin": "user",
+            "detail": "site attendance policy",
+            "confirmed": true
+          }
+        },
+        {
+          "name": "extra_hours",
+          "type": "integer",
+          "role": "derived",
+          "minimum": 0,
+          "maximum": 14,
+          "description": "hours beyond a 6-hour standard day",
+          "formula": {
+            "op": "clip",
+            "args": [
+              {
+                "op": "round",
+                "args": [
+                  {
+                    "op": "sub",
+                    "args": [
+                      {
+                        "col": "shift_hours"
+                      },
+                      {
+                        "const": 6
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "const": 0
+              },
+              {
+                "const": 14
+              }
+            ]
+          },
+          "provenance": {
+            "origin": "user",
+            "detail": "site overtime rule",
+            "confirmed": true
+          }
+        }
+      ],
+      "constraints": [
+        {
+          "operator": "unique",
+          "columns": [
+            "attendance_id"
+          ],
+          "description": "One row per attendance event"
+        },
+        {
+          "operator": "range",
+          "columns": [
+            "extra_hours"
+          ],
+          "minimum": 0,
+          "maximum": 14,
+          "description": "Overtime stays within the policy band"
+        }
+      ],
+      "source": {
+        "kind": "none"
+      }
+    },
+    {
+      "name": "project_assignments",
+      "primary_key": "assignment_id",
+      "columns": [
+        {
+          "name": "assignment_id",
+          "type": "uuid",
+          "role": "identifier",
+          "provenance": {
+            "origin": "user",
+            "confirmed": true
+          }
+        },
+        {
+          "name": "employee_id",
+          "type": "string",
+          "role": "rule",
+          "rule": {
+            "kind": "sequence",
+            "prefix": "TMP-"
+          },
+          "provenance": {
+            "origin": "user",
+            "confirmed": true
+          }
+        },
+        {
+          "name": "project_id",
+          "type": "string",
+          "role": "rule",
+          "rule": {
+            "kind": "sequence",
+            "prefix": "TMP-"
+          },
+          "provenance": {
+            "origin": "user",
+            "confirmed": true
+          }
+        },
+        {
+          "name": "contribution_percentage",
+          "type": "integer",
+          "role": "rule",
+          "minimum": 5,
+          "maximum": 100,
+          "rule": {
+            "kind": "integer_range",
+            "start": 5,
+            "end": 100
+          },
+          "provenance": {
+            "origin": "assistant_proposed",
+            "detail": "invented contribution split; confirm before use"
+          }
+        }
+      ],
+      "constraints": [
+        {
+          "operator": "unique",
+          "columns": [
+            "assignment_id"
+          ],
+          "description": "One row per assignment"
+        }
+      ],
+      "source": {
+        "kind": "none"
+      }
+    },
+    {
+      "name": "projects",
+      "rows": 15,
+      "primary_key": "project_id",
+      "columns": [
+        {
+          "name": "project_id",
+          "type": "string",
+          "role": "identifier",
+          "rule": {
+            "kind": "sequence",
+            "prefix": "PRJ-"
+          },
+          "provenance": {
+            "origin": "user",
+            "confirmed": true
+          }
+        },
+        {
+          "name": "complexity",
+          "type": "category",
+          "role": "rule",
+          "rule": {
+            "kind": "choice",
+            "values": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "provenance": {
+            "origin": "assistant_proposed",
+            "detail": "invented complexity mix; confirm before use"
+          }
+        }
+      ],
+      "constraints": [
+        {
+          "operator": "unique",
+          "columns": [
+            "project_id"
+          ],
+          "description": "One row per project"
+        }
+      ],
+      "source": {
+        "kind": "none"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "parent_table": "employees",
+      "parent_key": "employee_id",
+      "child_table": "attendance",
+      "child_key": "employee_id",
+      "cardinality": "one_to_many",
+      "child_count_min": 15,
+      "child_count_max": 60,
+      "provenance": {
+        "origin": "assistant_proposed",
+        "detail": "invented attendance volume; real data is far more skewed"
+      }
+    },
+    {
+      "parent_table": "employees",
+      "parent_key": "employee_id",
+      "child_table": "project_assignments",
+      "child_key": "employee_id",
+      "cardinality": "one_to_many",
+      "child_count_min": 1,
+      "child_count_max": 4,
+      "provenance": {
+        "origin": "assistant_proposed",
+        "detail": "invented assignment count"
+      }
+    },
+    {
+      "parent_table": "projects",
+      "parent_key": "project_id",
+      "child_table": "project_assignments",
+      "child_key": "project_id",
+      "cardinality": "one_to_many",
+      "provenance": {
+        "origin": "assistant_proposed",
+        "detail": "junction table second parent"
+      }
+    }
+  ],
+  "privacy": {
+    "protected_entity": "employee",
+    "mechanism": "none",
+    "notes": "Schema-only. No real employee records were used."
+  },
+  "evaluation": {
+    "checks": [
+      "schema",
+      "constraints",
+      "cardinality"
+    ]
+  }
+}

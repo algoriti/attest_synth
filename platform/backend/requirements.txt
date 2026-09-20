@@ -1,0 +1,12 @@
+# Direct dependencies for the synthetic data platform.
+fastapi==0.141.1
+uvicorn==0.53.0
+pydantic==2.12.4
+python-multipart==0.0.32
+pandas==2.3.3
+numpy==2.3.5
+scipy==1.16.3
+scikit-learn==1.8.0
+Faker==40.39.0
+arfpy==0.1.1
+pytest==9.0.2
