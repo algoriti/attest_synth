@@ -29,9 +29,19 @@ def _as_datetime(series: pd.Series) -> pd.Series:
 
 
 def _numeric(value: object) -> object:
-    """Coerce a bool-typed series to numbers so arithmetic behaves predictably."""
-    if isinstance(value, pd.Series) and value.dtype == bool:
-        return value.astype(float)
+    """Coerce a series to numbers so arithmetic behaves predictably.
+
+    Booleans and categoricals both reach arithmetic operators: a weekday is stored as a
+    category so an engine models it as a factor, but rebuilding a timestamp from it
+    needs the number back.
+    """
+    if isinstance(value, pd.Series):
+        if value.dtype == bool:
+            return value.astype(float)
+        if isinstance(value.dtype, pd.CategoricalDtype) or value.dtype == object:
+            converted = pd.to_numeric(value, errors="coerce")
+            if converted.notna().any():
+                return converted
     return value
 
 

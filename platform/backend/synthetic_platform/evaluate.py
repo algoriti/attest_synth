@@ -27,10 +27,12 @@ from sklearn.metrics import (
     mean_absolute_error,
     r2_score,
     roc_auc_score,
+    balanced_accuracy_score,
 )
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.impute import SimpleImputer
 
 from .spec import ColumnType, Constraint, ConstraintOperator, SemanticRole, Table
 
@@ -223,6 +225,7 @@ def predictive_utility(
     target: str,
     task: str,
     seed: int = 2026,
+    heldout: pd.DataFrame | None = None,
 ) -> dict:
     """Train on synthetic, test on held-out real rows, and compare against real training.
 
@@ -250,12 +253,24 @@ def predictive_utility(
     counts = labels.value_counts()
     positive_class = counts.index[-1] if len(counts) == 2 else None
 
-    real_train, real_test = train_test_split(
-        reference.dropna(subset=[target]),
-        test_size=0.25,
-        random_state=seed,
-        stratify=reference.dropna(subset=[target])[target] if task == "classification" else None,
-    )
+    if heldout is None:
+        raise ValueError("Supply real test records held out before generator fitting.")
+    real_train, real_test = reference.copy(), heldout.copy()
+    # A date is encoded as seconds, never passed as raw strings to a scaler.
+    synthetic = synthetic.copy()
+    temporal = [c.name for c in table.columns if c.name in features and c.type in (ColumnType.DATE, ColumnType.TIMESTAMP)]
+    for frame in (synthetic, real_train, real_test):
+        for name in temporal:
+            stamps = pd.to_datetime(frame[name], format="mixed", utc=True, errors="coerce")
+            frame[name] = stamps.astype("int64").astype(float).where(stamps.notna()) / 1e9
+    labels = sorted(real_train[target].dropna().unique().tolist(), key=str)
+    if task == "classification":
+        if len(labels) < 2 or not set(real_test[target].dropna()).issubset(set(labels)):
+            return {"error": "Training must contain at least two classes and cover all test classes."}
+        for frame in (synthetic, real_train, real_test):
+            frame[target] = frame[target].map({label:i for i,label in enumerate(labels)})
+    positive_code = labels.index(positive_class) if positive_class in labels else 1
+    multiclass = task == "classification" and len(labels) > 2
 
     categorical = [
         c.name
@@ -270,8 +285,8 @@ def predictive_utility(
             return {"error": "no training rows"}
         transform = ColumnTransformer(
             [
-                ("cat", OneHotEncoder(handle_unknown="ignore", sparse_output=False), categorical),
-                ("num", StandardScaler(), numeric),
+                ("cat", make_pipeline(SimpleImputer(strategy="most_frequent", keep_empty_features=True), OneHotEncoder(handle_unknown="ignore", sparse_output=False)), categorical),
+                ("num", make_pipeline(SimpleImputer(keep_empty_features=True), StandardScaler()), numeric),
             ]
         )
         if task == "classification":
@@ -286,6 +301,8 @@ def predictive_utility(
         pipe.fit(train_frame[features], train_frame[target])
 
         if task == "classification":
+            if multiclass:
+                return {"balanced_accuracy": float(balanced_accuracy_score(real_test[target], pipe.predict(real_test[features])))}
             proba = pipe.predict_proba(real_test[features])
             if proba.shape[1] < 2:
                 return {"error": "training data contained a single class"}
@@ -300,7 +317,7 @@ def predictive_utility(
             # The positive class is not always the literal 1. A target of 'yes'/'no'
             # scored against a hardcoded pos_label=1 raises rather than mis-scoring,
             # which is how this surfaced, but either would be wrong.
-            positive = positive_class if positive_class in classes else classes[-1]
+            positive = positive_code if positive_code in classes else classes[-1]
             pred = proba[:, classes.index(positive)]
             return {
                 "average_precision": float(
@@ -309,7 +326,7 @@ def predictive_utility(
                 "roc_auc": float(
                     roc_auc_score((real_test[target] == positive).astype(int), pred)
                 ),
-                "positive_class": str(positive),
+                "positive_class": str(labels[positive]),
             }
         pred = pipe.predict(real_test[features])
         return {
@@ -325,7 +342,7 @@ def predictive_utility(
     return {
         "target": target,
         "task": task,
-        "metric": "average_precision" if task == "classification" else "mae",
+        "metric": ("balanced_accuracy" if multiclass else "average_precision") if task == "classification" else "mae",
         "better": "higher" if task == "classification" else "lower",
         "test_rows": int(len(real_test)),
         "trained_on_synthetic": score(synthetic),

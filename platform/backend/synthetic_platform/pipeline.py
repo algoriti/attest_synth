@@ -2,7 +2,7 @@
 
 The order is fixed and matters:
 
-    validate -> generate (modellable columns only) -> derive -> normalise
+    validate -> split source -> generate and normalise -> derive
              -> check constraints -> evaluate -> report
 
 Deriving after generation is what keeps computed columns consistent with the columns
@@ -14,6 +14,8 @@ states what was and was not done, in the same words every time.
 """
 from __future__ import annotations
 
+import hashlib
+import importlib.metadata
 import platform
 import sys
 import time
@@ -33,6 +35,9 @@ from .evaluate import check_constraints, fidelity, predictive_utility
 from .spec import Mode, SemanticRole, SyntheticDataSpec
 from .suggest import prepare_source
 from .validator import validate
+from .verification import schema_checks, relationship_checks, frame_hash
+from .splitting import split_source
+from .relational_operations import aggregate, check_cross_table
 
 
 class PipelineError(RuntimeError):
@@ -49,6 +54,11 @@ def run(
     """Execute a specification end to end."""
     started = time.perf_counter()
     sources = sources or {}
+    spec = spec.model_copy(deep=True)
+    if rows is not None:
+        if not 1 <= rows <= 200000: raise PipelineError("Request between 1 and 200,000 rows.")
+        if spec.is_relational: raise PipelineError("Set per-table counts for relational requests.")
+        spec.primary_table.rows = rows
 
     engine_name = engine_base.choose_engine(spec)
     engine = engine_base.get_engine(engine_name)
@@ -65,11 +75,19 @@ def run(
         return _run_relational(spec, engine, validation, started, engine_name)
 
     table = spec.primary_table
-    requested = rows or table.rows or 100
+    requested = table.rows if table.rows is not None else 100
     source = sources.get(table.name)
 
     if spec.mode == Mode.LEARNED_TABLE and source is None:
         raise PipelineError(f"Mode 'learned_table' needs source records for '{table.name}'.")
+
+    heldout = None
+    split_evidence = None
+    if source is not None and "predictive_utility" in spec.evaluation.checks:
+        try:
+            source, heldout, split_evidence = split_source(source, spec.evaluation, spec.seed)
+        except ValueError as exc:
+            raise PipelineError(str(exc)) from exc
 
     # Columns that declare a source expression are feature-engineered onto the source
     # before an engine sees it, so a rewritten specification trains on the columns it
@@ -77,6 +95,8 @@ def run(
     if source is not None and any(c.source_expression for c in table.columns):
         try:
             source = prepare_source(source, table)
+            if heldout is not None:
+                heldout = prepare_source(heldout, table)
         except DerivationError as exc:
             raise PipelineError(f"Could not prepare the source columns: {exc}") from exc
 
@@ -86,16 +106,16 @@ def run(
     outcome.frame = frame
     outcome.derivation_trace = derivation_trace
 
-    constraint_results = check_constraints(frame, table)
+    constraint_results = schema_checks(frame, table) + check_constraints(frame, table)
 
-    evaluation: dict = {}
+    evaluation: dict = {"split": split_evidence} if split_evidence else {}
     if source is not None:
         if "fidelity" in spec.evaluation.checks:
             evaluation["fidelity"] = fidelity(frame, source, table)
         if "predictive_utility" in spec.evaluation.checks and spec.evaluation.target:
             task = spec.evaluation.task or "classification"
             evaluation["predictive_utility"] = predictive_utility(
-                frame, source, table, spec.evaluation.target, task, spec.seed
+                frame, source, table, spec.evaluation.target, task, spec.seed, heldout=heldout
             )
 
     report = build_report(
@@ -132,10 +152,16 @@ def _run_relational(
         outcome.frame = frame
         outcome.derivation_trace = trace
         frames[name] = frame
-        constraint_results[name] = check_constraints(frame, table)
+    aggregate_trace = aggregate(spec, frames)
+    for name, frame in frames.items():
+        table = spec.table(name)
+        constraint_results[name] = schema_checks(frame, table) + check_constraints(frame, table)
 
     evaluation = {
         "referential_integrity": referential_integrity(spec, frames),
+        "relationship_checks": relationship_checks(spec, frames),
+        "cross_table_checks": check_cross_table(spec, frames),
+        "aggregates": aggregate_trace,
         "cardinality": cardinality_report(spec, frames),
     }
 
@@ -212,7 +238,19 @@ def build_report(
             }
         )
 
+    all_constraints_passed &= all(r["passed"] for r in evaluation.get("relationship_checks", []))
+    all_constraints_passed &= all(r["passed"] for r in evaluation.get("cross_table_checks", []))
+    all_constraints_passed &= not incomplete
     assumptions = spec.open_assumptions()
+    performed = {}
+    for check in spec.evaluation.checks:
+        if check in ("schema", "constraints"):
+            performed[check] = {"status": "passed" if all_constraints_passed else "failed"}
+        elif check in evaluation:
+            performed[check] = {"status": "failed" if isinstance(evaluation[check],dict) and evaluation[check].get("error") else "completed"}
+        else:
+            performed[check] = {"status": "skipped", "reason": "No applicable reference data or relationship."}
+    evaluation["checks"] = performed
 
     return {
         "generated_utc": datetime.now(timezone.utc).isoformat(),
@@ -233,6 +271,7 @@ def build_report(
             "python": platform.python_version(),
             "platform": platform.platform(),
             "pandas": pd.__version__,
+            **{p: importlib.metadata.version(p) for p in ("arfpy", "numpy", "scipy", "scikit-learn", "Faker")},
             "executable": sys.executable,
         },
         "summary": {
@@ -266,10 +305,12 @@ def build_report(
         },
         "reproduction": {
             "seed": spec.seed,
+            "resolved_specification": spec.model_dump(mode="json"),
+            "artifact_sha256": {name: frame_hash(o.frame) for name,o in outcomes.items()},
             "note": (
-                "Re-running this specification with the same seed, engine version and "
-                "source data reproduces this dataset. Library and platform differences can "
-                "still change floating-point results."
+                "Use the resolved specification, source and recorded dependency versions to rerun. "
+                "Seeded rules are reproducible; learned-engine reproducibility must be verified "
+                "by comparing artifact hashes."
             ),
         },
     }

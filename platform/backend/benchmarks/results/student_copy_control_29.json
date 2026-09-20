@@ -1,0 +1,106 @@
+{
+  "dataset": "student",
+  "engine": "copy_control",
+  "seed": 29,
+  "seconds": 0.49082500099757453,
+  "peak_process_rss_kib": 167204,
+  "summary": {
+    "tables": 1,
+    "total_rows": 294,
+    "all_constraints_passed": true,
+    "incomplete_tables": [],
+    "open_assumptions": 0,
+    "elapsed_seconds": 0.4768
+  },
+  "evaluation": {
+    "split": {
+      "strategy": "random",
+      "column": null,
+      "train_rows": 294,
+      "test_rows": 98,
+      "excluded_unlabelled_rows": 0,
+      "source_sha256": "70834b3a4b92cbfdd3509321df0e0d74e078ca8d7644619ea393d97e3a16d519",
+      "train_sha256": "4fd26d2e58b452a92e12afba7e60e70d09b517b59bbdb559bf86203b35589fd8",
+      "test_sha256": "f1f9b7eb75f71e0914ee27ad9f39a3b658a06ac59cbbe0c6b4446ab08e2ddeee",
+      "note": "Generator fits training records only. User-declared policies and previously accepted schema assumptions are fixed inputs; no data-derived policy is independently validated by this score."
+    },
+    "fidelity": {
+      "numeric_ks": {
+        "age": 0.013605442176870748,
+        "studytime": 0.02040816326530612,
+        "failures": 0.03741496598639456,
+        "absences": 0.061224489795918366,
+        "G1": 0.03741496598639456,
+        "G2": 0.023809523809523808,
+        "G3": 0.023809523809523808
+      },
+      "categorical_tv": {
+        "school": 0.0,
+        "sex": 0.04081632653061226,
+        "schoolsup": 0.04081632653061227,
+        "higher": 0.006802721088435323,
+        "internet": 0.003401360544217691
+      },
+      "mean_numeric_ks": 0.031098153547133134,
+      "mean_categorical_tv": 0.01836734693877551,
+      "numeric_correlation_mae": 0.046754448602460155,
+      "exact_row_match_fraction": 1.0,
+      "interpretation": "KS and total-variation compare one column at a time; correlation error covers numeric pairs only. Matching marginals does not establish that relationships between columns survived."
+    },
+    "predictive_utility": {
+      "target": "G3",
+      "task": "regression",
+      "metric": "mae",
+      "better": "lower",
+      "test_rows": 98,
+      "trained_on_synthetic": {
+        "mae": 1.0917578852386776,
+        "r2": 0.8608220052968547
+      },
+      "trained_on_real": {
+        "mae": 0.9800179010332074,
+        "r2": 0.8897249227142566
+      },
+      "trained_on_independent_baseline": {
+        "mae": 3.8961272412394856,
+        "r2": -0.3037827464016445
+      },
+      "interpretation": "Synthetic data is useful for this task to the extent its score approaches the real-data score and clearly beats the independent baseline. A score close to real does not indicate privacy."
+    },
+    "checks": {
+      "schema": {
+        "status": "passed"
+      },
+      "constraints": {
+        "status": "passed"
+      },
+      "fidelity": {
+        "status": "completed"
+      },
+      "predictive_utility": {
+        "status": "completed"
+      }
+    }
+  },
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+    "pandas": "2.3.3",
+    "arfpy": "0.1.1",
+    "numpy": "2.3.5",
+    "scipy": "1.16.3",
+    "scikit-learn": "1.8.0",
+    "Faker": "40.39.0",
+    "executable": "/tmp/synthetic-review-venv/bin/python"
+  },
+  "repairs": {
+    "by_column": {},
+    "repaired_row_fraction": 0.0,
+    "raw_invalid_row_fraction": 0.0,
+    "note": "Repairs are type and bound corrections applied by the platform after generation. A high fraction often means one integer column was returned as a float, not that the data is unusable."
+  },
+  "artifact_sha256": {
+    "student": "5d2b4c802c06dfa2201a0aad312deddb151d2250e018b546999305934950249c"
+  },
+  "qualification": "Exploratory platform benchmark with one downstream random forest, not a privacy audit or universal engine ranking."
+}

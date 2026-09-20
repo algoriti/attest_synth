@@ -62,7 +62,7 @@ class RuleEngine(EngineAdapter):
 
         data: dict[str, object] = {}
         for column in table.columns:
-            if column.role in (SemanticRole.DERIVED, SemanticRole.CONSTANT, SemanticRole.EMPTY):
+            if column.role in (SemanticRole.DERIVED, SemanticRole.CONSTANT, SemanticRole.EMPTY, SemanticRole.AGGREGATE):
                 continue
             if column.role == SemanticRole.IDENTIFIER:
                 continue  # filled by apply_identifiers_and_constants

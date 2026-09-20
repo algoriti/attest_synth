@@ -118,6 +118,28 @@ def profile_csv(
         )
 
     notes.extend(_verify_proposed_formulas(frame, table))
+    # Re-evaluate each selected candidate over all comparable source rows. Discovery
+    # may have used a positive-only subset; never present that as whole-file agreement.
+    from .derive import evaluate
+    for note in notes:
+        if note.get("kind") != "derived_candidate" or not note.get("applied"):
+            continue
+        column = table.column(note["column"])
+        if column is None or column.formula is None:
+            continue
+        predicted = evaluate(column.formula, frame)
+        if not isinstance(predicted, pd.Series): predicted = pd.Series(predicted, index=frame.index)
+        observed = frame[column.name]
+        eligible = observed.notna() & predicted.notna()
+        if column.type in (ColumnType.INTEGER, ColumnType.NUMBER):
+            matches = np.isclose(pd.to_numeric(observed[eligible]), pd.to_numeric(predicted[eligible]), atol=1e-6)
+        else:
+            matches = observed[eligible].to_numpy() == predicted[eligible].to_numpy()
+        count, total = int(np.sum(matches)), int(eligible.sum())
+        note.update(discovery_agreement=note["agreement"], agreement=count/total if total else 0,
+                    match_count=count, eligible_rows=total, total_rows=len(frame), exceptions=total-count)
+        note["message"] = f"{column.description}. Matches {count:,} of {total:,} comparable rows; {total-count:,} exceptions; {len(frame)-total:,} rows not comparable."
+
 
     quality = _quality_notes(frame, parsed)
     report = {

@@ -1,0 +1,105 @@
+{
+  "dataset": "wine",
+  "engine": "independent",
+  "seed": 47,
+  "seconds": 1.4831420660011645,
+  "peak_process_rss_kib": 169944,
+  "summary": {
+    "tables": 1,
+    "total_rows": 900,
+    "all_constraints_passed": true,
+    "incomplete_tables": [],
+    "open_assumptions": 0,
+    "elapsed_seconds": 1.4672
+  },
+  "evaluation": {
+    "split": {
+      "strategy": "random",
+      "column": null,
+      "train_rows": 900,
+      "test_rows": 300,
+      "excluded_unlabelled_rows": 0,
+      "source_sha256": "d94ed5a193245c4169885c391e3d94b613f2a686bd558c229fb63ebd33d885cb",
+      "train_sha256": "e608fd78a43bf24be70ff60c154dce1d82390aeb2f9f2d7ee14ecf6c406ecd3a",
+      "test_sha256": "96ac8c3338f8edd4572c0ca7573097548d42acbacac33bf60d4b1233b69c4906",
+      "note": "Generator fits training records only. User-declared policies and previously accepted schema assumptions are fixed inputs; no data-derived policy is independently validated by this score."
+    },
+    "fidelity": {
+      "numeric_ks": {
+        "fixed acidity": 0.03333333333333333,
+        "volatile acidity": 0.023333333333333334,
+        "citric acid": 0.02,
+        "residual sugar": 0.04888888888888889,
+        "chlorides": 0.01888888888888889,
+        "free sulfur dioxide": 0.03,
+        "total sulfur dioxide": 0.035555555555555556,
+        "density": 0.02666666666666667,
+        "pH": 0.034444444444444444,
+        "sulphates": 0.044444444444444446,
+        "alcohol": 0.028888888888888888,
+        "quality": 0.0077777777777777776
+      },
+      "categorical_tv": {},
+      "mean_numeric_ks": 0.02935185185185185,
+      "mean_categorical_tv": null,
+      "numeric_correlation_mae": 0.21659439770775124,
+      "exact_row_match_fraction": 0.0,
+      "interpretation": "KS and total-variation compare one column at a time; correlation error covers numeric pairs only. Matching marginals does not establish that relationships between columns survived."
+    },
+    "predictive_utility": {
+      "target": "quality",
+      "task": "regression",
+      "metric": "mae",
+      "better": "lower",
+      "test_rows": 300,
+      "trained_on_synthetic": {
+        "mae": 0.6827461738261739,
+        "r2": -0.04519395643832547
+      },
+      "trained_on_real": {
+        "mae": 0.4717532949457948,
+        "r2": 0.416667857934398
+      },
+      "trained_on_independent_baseline": {
+        "mae": 0.6827461738261739,
+        "r2": -0.04519395643832547
+      },
+      "interpretation": "Synthetic data is useful for this task to the extent its score approaches the real-data score and clearly beats the independent baseline. A score close to real does not indicate privacy."
+    },
+    "checks": {
+      "schema": {
+        "status": "passed"
+      },
+      "constraints": {
+        "status": "passed"
+      },
+      "fidelity": {
+        "status": "completed"
+      },
+      "predictive_utility": {
+        "status": "completed"
+      }
+    }
+  },
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+    "pandas": "2.3.3",
+    "arfpy": "0.1.1",
+    "numpy": "2.3.5",
+    "scipy": "1.16.3",
+    "scikit-learn": "1.8.0",
+    "Faker": "40.39.0",
+    "executable": "/tmp/synthetic-review-venv/bin/python"
+  },
+  "repairs": {
+    "by_column": {},
+    "repaired_row_fraction": 0.0,
+    "raw_invalid_row_fraction": 0.0,
+    "note": "Repairs are type and bound corrections applied by the platform after generation. A high fraction often means one integer column was returned as a float, not that the data is unusable."
+  },
+  "artifact_sha256": {
+    "wine": "ed24df506c4b8c6f70119da26c2525200d936fbe0cd548f929d225736b99ba34"
+  },
+  "qualification": "Exploratory platform benchmark with one downstream random forest, not a privacy audit or universal engine ranking."
+}

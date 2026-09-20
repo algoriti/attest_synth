@@ -1,0 +1,108 @@
+{
+  "dataset": "bank",
+  "engine": "independent",
+  "seed": 29,
+  "seconds": 0.7163140960001328,
+  "peak_process_rss_kib": 169872,
+  "summary": {
+    "tables": 1,
+    "total_rows": 900,
+    "all_constraints_passed": true,
+    "incomplete_tables": [],
+    "open_assumptions": 0,
+    "elapsed_seconds": 0.6996
+  },
+  "evaluation": {
+    "split": {
+      "strategy": "random",
+      "column": null,
+      "train_rows": 900,
+      "test_rows": 300,
+      "excluded_unlabelled_rows": 0,
+      "source_sha256": "80710050463d3310e740a14baa06c4059a24c40d88a0e07ac6656702240121bb",
+      "train_sha256": "31dbe4e88e8672eef3c1f96f4b9eac95fb2c182948b9ea55d73a55ef12bbcd87",
+      "test_sha256": "709f799eb6790e8afa893f6b4206903ac294e2a7778972d533517a9942287e1d",
+      "note": "Generator fits training records only. User-declared policies and previously accepted schema assumptions are fixed inputs; no data-derived policy is independently validated by this score."
+    },
+    "fidelity": {
+      "numeric_ks": {
+        "age": 0.035555555555555556,
+        "balance": 0.03888888888888889,
+        "campaign": 0.013333333333333334,
+        "previous": 0.024444444444444446
+      },
+      "categorical_tv": {
+        "job": 0.046666666666666676,
+        "marital": 0.028888888888888874,
+        "education": 0.006666666666666689,
+        "housing": 0.0022222222222222365,
+        "loan": 0.018888888888888872,
+        "poutcome": 0.013333333333333381,
+        "y": 0.007777777777777772
+      },
+      "mean_numeric_ks": 0.02805555555555556,
+      "mean_categorical_tv": 0.017777777777777785,
+      "numeric_correlation_mae": 0.06719719009672294,
+      "exact_row_match_fraction": 0.0,
+      "interpretation": "KS and total-variation compare one column at a time; correlation error covers numeric pairs only. Matching marginals does not establish that relationships between columns survived."
+    },
+    "predictive_utility": {
+      "target": "y",
+      "task": "classification",
+      "metric": "average_precision",
+      "better": "higher",
+      "test_rows": 300,
+      "trained_on_synthetic": {
+        "average_precision": 0.16631982251871497,
+        "roc_auc": 0.5104043126684636,
+        "positive_class": "yes"
+      },
+      "trained_on_real": {
+        "average_precision": 0.4150738698456962,
+        "roc_auc": 0.6909973045822102,
+        "positive_class": "yes"
+      },
+      "trained_on_independent_baseline": {
+        "average_precision": 0.16631982251871497,
+        "roc_auc": 0.5104043126684636,
+        "positive_class": "yes"
+      },
+      "interpretation": "Synthetic data is useful for this task to the extent its score approaches the real-data score and clearly beats the independent baseline. A score close to real does not indicate privacy."
+    },
+    "checks": {
+      "schema": {
+        "status": "passed"
+      },
+      "constraints": {
+        "status": "passed"
+      },
+      "fidelity": {
+        "status": "completed"
+      },
+      "predictive_utility": {
+        "status": "completed"
+      }
+    }
+  },
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+    "pandas": "2.3.3",
+    "arfpy": "0.1.1",
+    "numpy": "2.3.5",
+    "scipy": "1.16.3",
+    "scikit-learn": "1.8.0",
+    "Faker": "40.39.0",
+    "executable": "/tmp/synthetic-review-venv/bin/python"
+  },
+  "repairs": {
+    "by_column": {},
+    "repaired_row_fraction": 0.0,
+    "raw_invalid_row_fraction": 0.0,
+    "note": "Repairs are type and bound corrections applied by the platform after generation. A high fraction often means one integer column was returned as a float, not that the data is unusable."
+  },
+  "artifact_sha256": {
+    "bank": "f16abf1075d09d7b6bf622c7db36f06ce6545ca3de2d6109832bbd97ababe825"
+  },
+  "qualification": "Exploratory platform benchmark with one downstream random forest, not a privacy audit or universal engine ranking."
+}

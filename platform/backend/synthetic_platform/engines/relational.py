@@ -1,17 +1,8 @@
-"""Parent-first relational generation.
+"""Bounded parent-first generation. Final schema and relationship checks are independent.
 
-Referential integrity here is a property of the construction, not something measured
-afterwards and hoped for: parents are generated first, each child row is handed a key
-drawn from a parent that already exists, so an orphan is not representable.
-
-Child counts are sampled from an empirical distribution when one was profiled from real
-data, and from a declared range otherwise. That distinction matters for employee data,
-where attendance records per employee were measured at a median of 74.5 against a
-maximum of 515. A uniform "2 to 6 children" rule would look tidy and reproduce none of
-that shape, so the source of the cardinality is recorded either way.
-
-This is the review's Strategy A. It proves the specification, the validator, the key
-controller and the relational metrics without a learned relational model.
+Single-parent counts use declared uniform ranges. Two-parent junctions solve degree
+bounds jointly; compound uniqueness is enforced when declared on the two foreign keys.
+This is a rule engine, not learned relational synthesis.
 """
 from __future__ import annotations
 
@@ -33,15 +24,17 @@ class RelationalRuleEngine(EngineAdapter):
         return {
             "name": self.name,
             "label": "Relational (parent-first rules)",
-            "description": "Generates linked tables in dependency order. Referential integrity by construction.",
+            "description": "Generates linked tables in dependency order. Final keys and cardinalities independently checked.",
             "single_table": True,
             "multi_table": True,
             "learns_from_records": False,
             "schema_only": True,
             "conditional_sampling": False,
-            "cross_table_constraints": True,
+            "cross_table_constraints": False,
             "one_to_many": True,
-            "many_to_many": False,
+            "many_to_many": True,
+            "max_parents_per_child": 2,
+            "compound_junction_uniqueness": True,
             "privacy_mechanism": "none",
             "constraints": [
                 "unique", "less_or_equal", "product_equals", "sum_equals",
@@ -80,7 +73,7 @@ class RelationalRuleEngine(EngineAdapter):
             incoming = [r for r in spec.relationships if r.child_table == table_name]
 
             if not incoming:
-                count = row_counts.get(table_name) or table.rows or 100
+                count = row_counts.get(table_name, table.rows if table.rows is not None else 100)
                 outcome = rule_engine.generate(spec, table, count, None)
                 frames[table_name] = outcome.frame
                 outcome.engine = self.name
@@ -91,11 +84,8 @@ class RelationalRuleEngine(EngineAdapter):
             assignments, warnings = _assign_parent_keys(spec, table, incoming, frames, rng)
             total = len(next(iter(assignments.values()))) if assignments else 0
 
-            if total == 0:
-                raise ValueError(
-                    f"table '{table_name}' resolved to zero rows; check the cardinality "
-                    "of its relationships"
-                )
+            if total > 200000:
+                raise ValueError("Relationship expansion exceeds 200,000 rows per table.")
 
             outcome = rule_engine.generate(spec, table, total, None)
             frame = outcome.frame
@@ -154,60 +144,78 @@ def _assign_parent_keys(
     its sampled child count. Any further parents are then sampled per row, which is how
     a junction table such as project_assignments gets both of its keys.
     """
-    warnings: list[str] = []
-    primary_rel = incoming[0]
-    parent_frame = frames.get(primary_rel.parent_table)
-    if parent_frame is None:
-        raise ValueError(f"parent table '{primary_rel.parent_table}' has not been generated")
-
-    parent_keys = parent_frame[primary_rel.parent_key].to_numpy()
-    counts = _sample_child_counts(primary_rel, len(parent_keys), rng)
-
-    if primary_rel.cardinality == "one_to_one":
-        counts = np.ones(len(parent_keys), dtype=int)
-
-    expanded = np.repeat(parent_keys, counts)
-    assignments: dict[str, np.ndarray] = {primary_rel.child_key: expanded}
-    total = len(expanded)
-
-    if primary_rel.optional and total:
-        # An optional link means some children legitimately have no parent.
-        drop = rng.random(total) < 0.02
-        if drop.any():
-            expanded = expanded.astype(object)
-            expanded[drop] = None
-            assignments[primary_rel.child_key] = expanded
-            warnings.append(
-                f"{int(drop.sum())} rows in '{table.name}' have a null "
-                f"'{primary_rel.child_key}' because the relationship is optional."
-            )
-
-    for rel in incoming[1:]:
-        other = frames.get(rel.parent_table)
-        if other is None:
-            raise ValueError(f"parent table '{rel.parent_table}' has not been generated")
-        other_keys = other[rel.parent_key].to_numpy()
-        if len(other_keys) == 0:
-            raise ValueError(f"parent table '{rel.parent_table}' produced no rows")
-        assignments[rel.child_key] = rng.choice(other_keys, size=total, replace=True)
-
-    return assignments, warnings
+    if len(incoming) == 2:
+        return _junction_keys(table, incoming, frames, rng), []
+    rel = incoming[0]
+    keys = frames[rel.parent_table][rel.parent_key].to_numpy()
+    low = rel.child_count_min if rel.child_count_min is not None else (0 if rel.cardinality == "one_to_one" else 1)
+    high = rel.child_count_max if rel.child_count_max is not None else (1 if rel.cardinality == "one_to_one" else 5)
+    if rel.cardinality == "one_to_one": high = min(high, 1)
+    if table.rows is None:
+        counts = rng.integers(low, high + 1, size=len(keys))
+        linked = int(counts.sum())
+        nulls = round(linked * rel.null_fraction / (1 - rel.null_fraction))
+    else:
+        nulls = round(table.rows * rel.null_fraction)
+        linked = table.rows - nulls
+        counts = _bounded_counts(len(keys), low, high, linked, rng)
+    if linked + nulls > 200000: raise ValueError("Relationship expansion exceeds 200,000 rows.")
+    expanded = np.repeat(keys, counts)
+    if nulls: expanded = np.concatenate([expanded.astype(object), np.full(nulls, None)])
+    rng.shuffle(expanded)
+    return {rel.child_key: expanded}, []
 
 
-def _sample_child_counts(
-    rel: Relationship, n_parents: int, rng: np.random.Generator
-) -> np.ndarray:
-    """How many children each parent gets.
+def _bounded_counts(n, low, high, total, rng):
+    if total < n * low or total > n * high:
+        raise ValueError(f"Infeasible child count: {total} requested; allowed {n*low}..{n*high}.")
+    counts = np.full(n, low, dtype=int)
+    left = total - n * low
+    # Distribute remaining counts without allocating a huge repeated-key pool.
+    while left:
+        available = np.flatnonzero(counts < high)
+        chosen = rng.choice(available, size=min(left, len(available)), replace=False)
+        counts[chosen] += 1
+        left -= len(chosen)
+    return counts
 
-    An empirical distribution is used when the profiler captured one; otherwise the
-    declared min/max range. Real cardinality is usually heavily skewed, so a uniform
-    range is a modelling choice worth recording rather than a neutral default.
-    """
-    low = rel.child_count_min if rel.child_count_min is not None else 1
-    high = rel.child_count_max if rel.child_count_max is not None else 5
-    if low > high:
-        low, high = high, low
-    return rng.integers(low, high + 1, size=n_parents)
+
+def _junction_keys(table, incoming, frames, rng):
+    from scipy.optimize import milp, Bounds, LinearConstraint
+    from scipy.sparse import lil_matrix
+    a,b = incoming
+    ka,kb = (frames[r.parent_table][r.parent_key].to_numpy() for r in incoming)
+    na,nb = len(ka),len(kb)
+    if na*nb > 50000:
+        raise ValueError("This PoC supports junctions with at most 50,000 possible parent pairs.")
+    def bounds(rel,n,first=False):
+        lo = rel.child_count_min if rel.child_count_min is not None else (1 if first else 0)
+        hi = rel.child_count_max if rel.child_count_max is not None else (5 if first else 200000)
+        if rel.cardinality == 'one_to_one': hi = 1
+        return lo,hi
+    la,ha = bounds(a,na,True); lb,hb = bounds(b,nb)
+    unique = any(set(k)=={a.child_key,b.child_key} for k in table.unique_keys)
+    if unique: ha,hb = min(ha,nb),min(hb,na)
+    lower,upper = max(na*la,nb*lb),min(na*ha,nb*hb,200000)
+    if lower>upper: raise ValueError("Infeasible junction cardinalities across the two parents.")
+    total = table.rows if table.rows is not None else int(rng.integers(lower,upper+1))
+    if total<lower or total>upper: raise ValueError(f"Junction row count must be between {lower} and {upper}.")
+    if not total:
+        return {a.child_key:ka[:0],b.child_key:kb[:0]}
+    if not na or not nb: raise ValueError("Nonempty junction requires both parent tables.")
+    matrix = lil_matrix((na+nb+1,na*nb))
+    for i in range(na): matrix[i,i*nb:(i+1)*nb]=1
+    for j in range(nb): matrix[na+j,j::nb]=1
+    matrix[-1,:]=1
+    solution = milp(rng.random(na*nb),integrality=np.ones(na*nb),
+        bounds=Bounds(0,1 if unique else total),
+        constraints=LinearConstraint(matrix.tocsr(),[la]*na+[lb]*nb+[total],[ha]*na+[hb]*nb+[total]),
+        options={'time_limit':10})
+    if not solution.success or solution.x is None:
+        raise ValueError("Could not satisfy junction bounds within the solver limit; reduce counts or relax the declared rules.")
+    cells = np.repeat(np.arange(na*nb),np.rint(solution.x).astype(int))
+    rng.shuffle(cells)
+    return {a.child_key:ka[cells//nb],b.child_key:kb[cells%nb]}
 
 
 def referential_integrity(

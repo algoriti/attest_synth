@@ -1,0 +1,208 @@
+{
+  "name": "education_relational",
+  "spec_version": "2.0",
+  "mode": "relational_rules",
+  "purpose": "teaching",
+  "engine": "relational_rules",
+  "seed": 2026,
+  "description": "Students, courses and unique enrolments with course capacity and student enrolment counts.",
+  "tables": [
+    {
+      "name": "students",
+      "primary_key": "student_id",
+      "rows": 25,
+      "columns": [
+        {
+          "name": "student_id",
+          "type": "integer",
+          "role": "identifier",
+          "provenance": {
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Invented scenario for software testing; not measured from a population."
+          }
+        },
+        {
+          "name": "year",
+          "type": "category",
+          "role": "rule",
+          "rule": {
+            "kind": "choice",
+            "values": [
+              "first",
+              "second",
+              "third"
+            ]
+          },
+          "provenance": {
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Invented scenario for software testing; not measured from a population."
+          }
+        },
+        {
+          "name": "course_count",
+          "type": "integer",
+          "role": "aggregate",
+          "provenance": {
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Invented scenario for software testing; not measured from a population."
+          }
+        }
+      ],
+      "source": {
+        "kind": "none"
+      }
+    },
+    {
+      "name": "courses",
+      "primary_key": "course_id",
+      "rows": 10,
+      "columns": [
+        {
+          "name": "course_id",
+          "type": "integer",
+          "role": "identifier",
+          "provenance": {
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Invented scenario for software testing; not measured from a population."
+          }
+        },
+        {
+          "name": "subject",
+          "type": "category",
+          "role": "rule",
+          "rule": {
+            "kind": "choice",
+            "values": [
+              "science",
+              "arts",
+              "engineering"
+            ]
+          },
+          "provenance": {
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Invented scenario for software testing; not measured from a population."
+          }
+        }
+      ],
+      "source": {
+        "kind": "none"
+      }
+    },
+    {
+      "name": "enrolments",
+      "primary_key": "enrolment_id",
+      "rows": null,
+      "columns": [
+        {
+          "name": "enrolment_id",
+          "type": "integer",
+          "role": "identifier",
+          "provenance": {
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Invented scenario for software testing; not measured from a population."
+          }
+        },
+        {
+          "name": "student_id",
+          "type": "integer",
+          "role": "rule",
+          "rule": {
+            "kind": "sequence"
+          },
+          "provenance": {
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Invented scenario for software testing; not measured from a population."
+          }
+        },
+        {
+          "name": "course_id",
+          "type": "integer",
+          "role": "rule",
+          "rule": {
+            "kind": "sequence"
+          },
+          "provenance": {
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Invented scenario for software testing; not measured from a population."
+          }
+        },
+        {
+          "name": "score",
+          "type": "number",
+          "role": "rule",
+          "rule": {
+            "kind": "number_range",
+            "start": 0,
+            "end": 100
+          },
+          "provenance": {
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Invented scenario for software testing; not measured from a population."
+          }
+        }
+      ],
+      "source": {
+        "kind": "none"
+      },
+      "unique_keys": [
+        [
+          "student_id",
+          "course_id"
+        ]
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "parent_table": "students",
+      "parent_key": "student_id",
+      "child_table": "enrolments",
+      "child_key": "student_id",
+      "child_count_min": 1,
+      "child_count_max": 4,
+      "provenance": {
+        "origin": "assistant_proposed",
+        "confirmed": false,
+        "detail": "Invented scenario for software testing; not measured from a population."
+      }
+    },
+    {
+      "parent_table": "courses",
+      "parent_key": "course_id",
+      "child_table": "enrolments",
+      "child_key": "course_id",
+      "child_count_min": 0,
+      "child_count_max": 15,
+      "provenance": {
+        "origin": "assistant_proposed",
+        "confirmed": false,
+        "detail": "Invented scenario for software testing; not measured from a population."
+      }
+    }
+  ],
+  "aggregates": [
+    {
+      "parent_table": "students",
+      "child_table": "enrolments",
+      "child_key": "student_id",
+      "target_column": "course_count",
+      "operation": "count"
+    }
+  ],
+  "evaluation": {
+    "checks": [
+      "schema",
+      "constraints",
+      "cardinality"
+    ]
+  }
+}

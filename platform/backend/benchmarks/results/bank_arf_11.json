@@ -1,0 +1,113 @@
+{
+  "dataset": "bank",
+  "engine": "arf",
+  "seed": 11,
+  "seconds": 6.82847897299871,
+  "peak_process_rss_kib": 187680,
+  "summary": {
+    "tables": 1,
+    "total_rows": 900,
+    "all_constraints_passed": true,
+    "incomplete_tables": [],
+    "open_assumptions": 0,
+    "elapsed_seconds": 6.8113
+  },
+  "evaluation": {
+    "split": {
+      "strategy": "random",
+      "column": null,
+      "train_rows": 900,
+      "test_rows": 300,
+      "excluded_unlabelled_rows": 0,
+      "source_sha256": "80710050463d3310e740a14baa06c4059a24c40d88a0e07ac6656702240121bb",
+      "train_sha256": "66c4e1bbbddec25383379f10d1a37d8b634a195682c73609759f7bcb2e675af5",
+      "test_sha256": "9958679de695ff53efe3fbdf3e0ddbe519ba3164cea18ad31df9715ca10d0577",
+      "note": "Generator fits training records only. User-declared policies and previously accepted schema assumptions are fixed inputs; no data-derived policy is independently validated by this score."
+    },
+    "fidelity": {
+      "numeric_ks": {
+        "age": 0.03222222222222222,
+        "balance": 0.12111111111111111,
+        "campaign": 0.05444444444444444,
+        "previous": 0.07777777777777778
+      },
+      "categorical_tv": {
+        "job": 0.022222222222222233,
+        "marital": 0.0211111111111111,
+        "education": 0.027777777777777762,
+        "housing": 0.007777777777777772,
+        "loan": 0.007777777777777772,
+        "poutcome": 0.01777777777777778,
+        "y": 0.003333333333333313
+      },
+      "mean_numeric_ks": 0.07138888888888889,
+      "mean_categorical_tv": 0.015396825396825391,
+      "numeric_correlation_mae": 0.04415921115126605,
+      "exact_row_match_fraction": 0.0011111111111111111,
+      "interpretation": "KS and total-variation compare one column at a time; correlation error covers numeric pairs only. Matching marginals does not establish that relationships between columns survived."
+    },
+    "predictive_utility": {
+      "target": "y",
+      "task": "classification",
+      "metric": "average_precision",
+      "better": "higher",
+      "test_rows": 300,
+      "trained_on_synthetic": {
+        "average_precision": 0.2580750993994839,
+        "roc_auc": 0.6158490566037736,
+        "positive_class": "yes"
+      },
+      "trained_on_real": {
+        "average_precision": 0.3066011025854219,
+        "roc_auc": 0.6181132075471699,
+        "positive_class": "yes"
+      },
+      "trained_on_independent_baseline": {
+        "average_precision": 0.14124691595643646,
+        "roc_auc": 0.5209703504043127,
+        "positive_class": "yes"
+      },
+      "interpretation": "Synthetic data is useful for this task to the extent its score approaches the real-data score and clearly beats the independent baseline. A score close to real does not indicate privacy."
+    },
+    "checks": {
+      "schema": {
+        "status": "passed"
+      },
+      "constraints": {
+        "status": "passed"
+      },
+      "fidelity": {
+        "status": "completed"
+      },
+      "predictive_utility": {
+        "status": "completed"
+      }
+    }
+  },
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+    "pandas": "2.3.3",
+    "arfpy": "0.1.1",
+    "numpy": "2.3.5",
+    "scipy": "1.16.3",
+    "scikit-learn": "1.8.0",
+    "Faker": "40.39.0",
+    "executable": "/tmp/synthetic-review-venv/bin/python"
+  },
+  "repairs": {
+    "by_column": {
+      "age": 896,
+      "balance": 898,
+      "campaign": 767,
+      "previous": 443
+    },
+    "repaired_row_fraction": 1.0,
+    "raw_invalid_row_fraction": 1.0,
+    "note": "Repairs are type and bound corrections applied by the platform after generation. A high fraction often means one integer column was returned as a float, not that the data is unusable."
+  },
+  "artifact_sha256": {
+    "bank": "0fd5fd029a7700fb6f70154a269907cd042424ca7e95ca71ffa2bc613887590c"
+  },
+  "qualification": "Exploratory platform benchmark with one downstream random forest, not a privacy audit or universal engine ranking."
+}

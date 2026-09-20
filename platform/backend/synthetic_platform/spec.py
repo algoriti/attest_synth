@@ -50,6 +50,7 @@ class SemanticRole(str, Enum):
     DERIVED = "derived"  # computed from other columns after generation
     CONSTANT = "constant"  # single value throughout
     EMPTY = "empty"  # no observed values; dropped unless requested
+    AGGREGATE = "aggregate"  # computed from related child records after generation
 
 
 class ColumnType(str, Enum):
@@ -338,6 +339,27 @@ class Table(BaseModel):
         return next((c for c in self.columns if c.name == name), None)
 
 
+class Aggregate(BaseModel):
+    parent_table: str
+    child_table: str
+    child_key: str
+    target_column: str
+    operation: Literal["count", "sum", "mean", "min", "max"]
+    source_column: str | None = None
+    # count counts child rows; other operations ignore null input values.
+    empty_value: float | None = None
+
+
+class CrossTableConstraint(BaseModel):
+    parent_table: str
+    child_table: str
+    child_key: str
+    parent_column: str
+    child_column: str
+    operator: Literal["less_or_equal", "greater_or_equal"]
+    missing: Literal["fail", "skip"] = "fail"
+
+
 class SyntheticDataSpec(BaseModel):
     """The whole request. Single-table specs carry exactly one table."""
 
@@ -350,6 +372,8 @@ class SyntheticDataSpec(BaseModel):
     seed: int = 2026
     tables: list[Table] = Field(default_factory=list)
     relationships: list[Relationship] = Field(default_factory=list)
+    aggregates: list[Aggregate] = Field(default_factory=list)
+    cross_table_constraints: list[CrossTableConstraint] = Field(default_factory=list)
     privacy: PrivacyIntent = Field(default_factory=PrivacyIntent)
     evaluation: Evaluation = Field(default_factory=Evaluation)
 

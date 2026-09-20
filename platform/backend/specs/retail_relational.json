@@ -1,0 +1,246 @@
+{
+  "name": "retail_relational",
+  "spec_version": "2.0",
+  "mode": "relational_rules",
+  "purpose": "software_testing",
+  "engine": "relational_rules",
+  "seed": 2026,
+  "description": "Customers, products and order lines, with unique customer/product pairs and totals summarized from line items.",
+  "tables": [
+    {
+      "name": "customers",
+      "primary_key": "customer_id",
+      "rows": 20,
+      "columns": [
+        {
+          "name": "customer_id",
+          "type": "integer",
+          "role": "identifier",
+          "provenance": {
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Invented scenario for software testing; not measured from a population."
+          }
+        },
+        {
+          "name": "segment",
+          "type": "category",
+          "role": "rule",
+          "rule": {
+            "kind": "choice",
+            "values": [
+              "new",
+              "returning"
+            ]
+          },
+          "provenance": {
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Invented scenario for software testing; not measured from a population."
+          }
+        },
+        {
+          "name": "total_spend",
+          "type": "number",
+          "role": "aggregate",
+          "nullable": false,
+          "provenance": {
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Invented scenario for software testing; not measured from a population."
+          }
+        }
+      ],
+      "source": {
+        "kind": "none"
+      }
+    },
+    {
+      "name": "products",
+      "primary_key": "product_id",
+      "rows": 12,
+      "columns": [
+        {
+          "name": "product_id",
+          "type": "integer",
+          "role": "identifier",
+          "provenance": {
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Invented scenario for software testing; not measured from a population."
+          }
+        },
+        {
+          "name": "category",
+          "type": "category",
+          "role": "rule",
+          "rule": {
+            "kind": "choice",
+            "values": [
+              "books",
+              "equipment",
+              "supplies"
+            ]
+          },
+          "provenance": {
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Invented scenario for software testing; not measured from a population."
+          }
+        }
+      ],
+      "source": {
+        "kind": "none"
+      }
+    },
+    {
+      "name": "order_lines",
+      "primary_key": "line_id",
+      "rows": null,
+      "columns": [
+        {
+          "name": "line_id",
+          "type": "integer",
+          "role": "identifier",
+          "provenance": {
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Invented scenario for software testing; not measured from a population."
+          }
+        },
+        {
+          "name": "customer_id",
+          "type": "integer",
+          "role": "rule",
+          "rule": {
+            "kind": "sequence"
+          },
+          "provenance": {
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Invented scenario for software testing; not measured from a population."
+          }
+        },
+        {
+          "name": "product_id",
+          "type": "integer",
+          "role": "rule",
+          "rule": {
+            "kind": "sequence"
+          },
+          "provenance": {
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Invented scenario for software testing; not measured from a population."
+          }
+        },
+        {
+          "name": "quantity",
+          "type": "integer",
+          "role": "rule",
+          "rule": {
+            "kind": "integer_range",
+            "start": 1,
+            "end": 5
+          },
+          "provenance": {
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Invented scenario for software testing; not measured from a population."
+          }
+        },
+        {
+          "name": "unit_price",
+          "type": "number",
+          "role": "rule",
+          "rule": {
+            "kind": "number_range",
+            "start": 5,
+            "end": 100
+          },
+          "provenance": {
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Invented scenario for software testing; not measured from a population."
+          }
+        },
+        {
+          "name": "line_total",
+          "type": "number",
+          "role": "derived",
+          "formula": {
+            "op": "mul",
+            "args": [
+              {
+                "col": "quantity"
+              },
+              {
+                "col": "unit_price"
+              }
+            ]
+          },
+          "provenance": {
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Invented scenario for software testing; not measured from a population."
+          }
+        }
+      ],
+      "source": {
+        "kind": "none"
+      },
+      "unique_keys": [
+        [
+          "customer_id",
+          "product_id"
+        ]
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "parent_table": "customers",
+      "parent_key": "customer_id",
+      "child_table": "order_lines",
+      "child_key": "customer_id",
+      "child_count_min": 1,
+      "child_count_max": 5,
+      "provenance": {
+        "origin": "assistant_proposed",
+        "confirmed": false,
+        "detail": "Invented scenario for software testing; not measured from a population."
+      }
+    },
+    {
+      "parent_table": "products",
+      "parent_key": "product_id",
+      "child_table": "order_lines",
+      "child_key": "product_id",
+      "child_count_min": 0,
+      "child_count_max": 12,
+      "provenance": {
+        "origin": "assistant_proposed",
+        "confirmed": false,
+        "detail": "Invented scenario for software testing; not measured from a population."
+      }
+    }
+  ],
+  "aggregates": [
+    {
+      "parent_table": "customers",
+      "child_table": "order_lines",
+      "child_key": "customer_id",
+      "target_column": "total_spend",
+      "operation": "sum",
+      "source_column": "line_total",
+      "empty_value": 0
+    }
+  ],
+  "evaluation": {
+    "checks": [
+      "schema",
+      "constraints",
+      "cardinality"
+    ]
+  }
+}

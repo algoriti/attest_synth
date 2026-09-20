@@ -119,11 +119,15 @@ def _temporal_rewrite(
 
     adds = [
         Column(
+            # A weekday is a category, not a quantity. Typed as an integer it is handed
+            # to a tree-based engine as a continuous variable, which is wrong twice: it
+            # implies Sunday is six units away from Monday rather than adjacent, and a
+            # leaf holding a single weekday has zero variance, which arfpy cannot fit a
+            # distribution to. As a category it is modelled as a factor instead.
             name=weekday_name,
-            type=ColumnType.INTEGER,
+            type=ColumnType.CATEGORY,
             role=SemanticRole.LEARNED,
-            minimum=0,
-            maximum=6,
+            allowed_values=list(range(7)),
             description=f"day of week extracted from '{base}' (0 = Monday)",
             source_expression=Expr.model_validate(
                 {"op": "day_of_week", "args": [{"col": base}], "tz_offset_hours": tz_offset_hours}

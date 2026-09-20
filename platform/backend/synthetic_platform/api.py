@@ -10,6 +10,8 @@ PostgreSQL tables is the obvious next step and touches nothing else.
 from __future__ import annotations
 
 import io
+import re
+import hashlib
 import json
 import threading
 import traceback
@@ -23,7 +25,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from . import __version__
 from .engines import available_engines
@@ -43,7 +45,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,6 +57,20 @@ STORAGE.mkdir(exist_ok=True)
 UPLOADS: dict[str, dict[str, Any]] = {}
 JOBS: dict[str, dict[str, Any]] = {}
 _LOCK = threading.Lock()
+_JOB_SLOTS = threading.BoundedSemaphore(2)
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024
+
+
+def artifact_path(job_id: str, filename: str) -> Path:
+    if not re.fullmatch(r"[a-zA-Z0-9_]{1,64}", job_id):
+        raise HTTPException(400, "Invalid job identifier.")
+    if not re.fullmatch(r"[a-zA-Z][a-zA-Z0-9_]{0,63}\.(csv|json)", filename):
+        raise HTTPException(400, "Invalid artifact name.")
+    directory = (STORAGE / job_id).resolve()
+    path = (directory / filename).resolve()
+    if directory.parent != STORAGE.resolve() or path.parent != directory:
+        raise HTTPException(400, "Artifact path is outside its job directory.")
+    return path
 
 
 # --- models ---------------------------------------------------------------------
@@ -66,7 +82,7 @@ class ValidateRequest(BaseModel):
 
 class GenerateRequest(BaseModel):
     spec: dict
-    rows: int | None = None
+    rows: int | None = Field(default=None, ge=1, le=200000)
     upload_id: str | None = None
 
 
@@ -122,6 +138,26 @@ _ROLE_HELP = {
 }
 
 
+# The assistant receives only an explicit user prompt, never an upload identifier.
+class AssistantRequest(BaseModel):
+    prompt: str = Field(min_length=10, max_length=4000)
+
+
+@app.get("/api/assistant/config")
+def assistant_config():
+    from .assistant import configuration
+    return configuration()
+
+
+@app.post("/api/assistant")
+def assistant_proposal(request: AssistantRequest):
+    from .assistant import propose
+    try:
+        return propose(request.prompt)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
 # --- upload and profiling --------------------------------------------------------
 
 
@@ -135,20 +171,26 @@ async def upload(file: UploadFile = File(...)) -> dict:
     if not file.filename or not file.filename.lower().endswith((".csv", ".tsv", ".txt")):
         raise HTTPException(400, "Upload a .csv file.")
 
-    raw = await file.read()
+    raw = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(raw) > MAX_UPLOAD_BYTES:
+        raise HTTPException(413, "Upload a file smaller than 20 MB.")
     try:
-        frame = pd.read_csv(io.BytesIO(raw), low_memory=False)
+        frame = pd.read_csv(io.BytesIO(raw), low_memory=False, sep="\t" if file.filename.lower().endswith(".tsv") else ",")
     except Exception as exc:
         raise HTTPException(400, f"Could not read the CSV: {exc}") from exc
 
     if frame.empty:
         raise HTTPException(400, "The uploaded file has no rows.")
 
+    if len(frame) > 200000 or len(frame.columns) > 200:
+        raise HTTPException(413, "Use at most 200,000 rows and 200 columns.")
     upload_id = uuid.uuid4().hex[:12]
     stem = Path(file.filename).stem.replace(" ", "_").replace("-", "_")[:40] or "uploaded"
     path = STORAGE / f"{upload_id}.csv"
-    path.write_bytes(raw)
+    frame.to_csv(path, index=False)
 
+    stem = re.sub(r"[^A-Za-z0-9_]", "_", stem)
+    if not stem or not stem[0].isalpha(): stem = "table_" + stem
     table, report = profile_csv(frame, stem, tz_offset_hours=0.0)
 
     with _LOCK:
@@ -292,11 +334,22 @@ def generate(request: GenerateRequest) -> dict:
     except Exception as exc:
         raise HTTPException(422, f"The specification is not well formed: {exc}") from exc
 
+    from .engines import base as engine_base
+    try:
+        caps = engine_base.get_engine(engine_base.choose_engine(spec)).capabilities()
+    except KeyError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    result = validate(spec, caps)
+    if not result.ok:
+        raise HTTPException(422, result.as_dict())
+    if not _JOB_SLOTS.acquire(blocking=False):
+        raise HTTPException(429, "Two jobs are already running. Wait for one to finish and retry.")
     job_id = uuid.uuid4().hex[:12]
     with _LOCK:
         JOBS[job_id] = {
             "id": job_id,
             "status": "queued",
+            "slot_acquired": True,
             "spec_name": spec.name,
             "created_utc": _now(),
             "progress": "queued",
@@ -332,12 +385,14 @@ def _run_job(job_id: str, spec: SyntheticDataSpec, rows: int | None, upload_id: 
         out_dir.mkdir(exist_ok=True)
         previews = {}
         for name, frame in result["frames"].items():
-            frame.to_csv(out_dir / f"{name}.csv", index=False)
+            frame.to_csv(artifact_path(job_id, f"{name}.csv"), index=False)
             previews[name] = _preview(frame)
         (out_dir / "evidence_report.json").write_text(
             json.dumps(result["report"], indent=2, default=str)
         )
-        (out_dir / "specification.json").write_text(spec.model_dump_json(indent=2))
+        (out_dir / "specification.json").write_text(json.dumps(result["report"]["reproduction"]["resolved_specification"], indent=2))
+        manifest = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in out_dir.iterdir() if p.is_file()}
+        (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
 
         with _LOCK:
             JOBS[job_id].update(
@@ -373,6 +428,10 @@ def _run_job(job_id: str, spec: SyntheticDataSpec, rows: int | None, upload_id: 
                 }
             )
 
+    finally:
+        if JOBS.get(job_id, {}).pop("slot_acquired", False):
+            _JOB_SLOTS.release()
+
 
 @app.get("/api/jobs")
 def list_jobs() -> dict:
@@ -395,7 +454,7 @@ def job_status(job_id: str) -> dict:
 
 @app.get("/api/jobs/{job_id}/download/{table}")
 def download(job_id: str, table: str):
-    path = STORAGE / job_id / f"{table}.csv"
+    path = artifact_path(job_id, f"{table}.csv")
     if not path.exists():
         raise HTTPException(404, "No such table for this job.")
     return FileResponse(path, media_type="text/csv", filename=f"{table}.csv")
@@ -403,7 +462,7 @@ def download(job_id: str, table: str):
 
 @app.get("/api/jobs/{job_id}/report")
 def download_report(job_id: str):
-    path = STORAGE / job_id / "evidence_report.json"
+    path = artifact_path(job_id, "evidence_report.json")
     if not path.exists():
         raise HTTPException(404, "No report for this job.")
     return FileResponse(path, media_type="application/json", filename="evidence_report.json")
@@ -417,7 +476,7 @@ def download_specification(job_id: str):
     reachable only by digging through the storage directory made the reproducible part
     of the deliverable the hardest part to obtain.
     """
-    path = STORAGE / job_id / "specification.json"
+    path = artifact_path(job_id, "specification.json")
     if not path.exists():
         raise HTTPException(404, "No specification for this job.")
     return FileResponse(path, media_type="application/json", filename="specification.json")

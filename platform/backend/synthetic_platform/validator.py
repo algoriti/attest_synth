@@ -106,6 +106,7 @@ def validate(spec: SyntheticDataSpec, engine_capabilities: dict | None = None) -
         _validate_table(spec, table, result)
 
     _validate_relationships(spec, result)
+    _validate_relational_operations(spec, result)
     _validate_privacy(spec, result)
     _validate_evaluation(spec, result)
 
@@ -622,3 +623,35 @@ def _validate_capabilities(spec: SyntheticDataSpec, caps: dict, result: Validati
                         f"{table.name}.{column.name}",
                     )
                 )
+
+
+def _validate_relational_operations(spec, result):
+    from .relational_operations import relation
+    targets=set()
+    for operation in [*spec.aggregates,*spec.cross_table_constraints]:
+        rel=relation(spec,operation)
+        if rel is None:
+            result.findings.append(Finding(Severity.ERROR,"operation_relationship","Aggregation and cross-table checks require a declared matching relationship."))
+            continue
+        parent,child=spec.table(operation.parent_table),spec.table(operation.child_table)
+        if hasattr(operation,'target_column'):
+            target=parent.column(operation.target_column)
+            source=child.column(operation.source_column or '')
+            key=(parent.name,operation.target_column)
+            if key in targets or target is None or target.role!=SemanticRole.AGGREGATE or target.type not in NUMERIC_TYPES:
+                result.findings.append(Finding(Severity.ERROR,"aggregate_target","Each aggregate needs a distinct numeric target column with role aggregate.",parent.name))
+            targets.add(key)
+            if operation.operation!='count' and (source is None or source.type not in NUMERIC_TYPES or source.role==SemanticRole.AGGREGATE):
+                result.findings.append(Finding(Severity.ERROR,"aggregate_source","Use a numeric, non-aggregate child column for this operation.",child.name))
+        else:
+            pc,cc=parent.column(operation.parent_column),child.column(operation.child_column)
+            if not pc or not cc or not ({pc.type,cc.type}<=NUMERIC_TYPES or {pc.type,cc.type}<=TEMPORAL_TYPES):
+                result.findings.append(Finding(Severity.ERROR,"cross_table_type","Cross-table comparisons require compatible numeric or temporal columns."))
+    for table in spec.tables:
+        aggregate_names={c.name for c in table.columns if c.role==SemanticRole.AGGREGATE}
+        for name in aggregate_names:
+            if (table.name,name) not in targets:
+                result.findings.append(Finding(Severity.ERROR,"missing_aggregate","An aggregate column needs an aggregate operation.",f'{table.name}.{name}'))
+        for column in table.columns:
+            if column.formula and column.formula.referenced_columns() & aggregate_names:
+                result.findings.append(Finding(Severity.ERROR,"aggregate_formula_dependency","Formulas depending on post-generation aggregates are not supported yet.",table.name))

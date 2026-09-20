@@ -3,7 +3,7 @@
   "name": "employee_relational",
   "mode": "relational_rules",
   "purpose": "software_testing",
-  "description": "Employees with attendance and project assignments. Referential integrity by construction.",
+  "description": "Example employee, attendance and project tables with checked keys and explicitly assumed behaviour.",
   "seed": 2026,
   "engine": "relational_rules",
   "tables": [
@@ -158,9 +158,9 @@
             ]
           },
           "provenance": {
-            "origin": "user",
-            "detail": "site attendance policy",
-            "confirmed": true
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Demonstration assumption; institution policy has not been confirmed."
           }
         },
         {
@@ -198,9 +198,9 @@
             ]
           },
           "provenance": {
-            "origin": "user",
-            "detail": "site overtime rule",
-            "confirmed": true
+            "origin": "assistant_proposed",
+            "confirmed": false,
+            "detail": "Demonstration assumption; institution policy has not been confirmed."
           }
         }
       ],
@@ -293,7 +293,13 @@
       ],
       "source": {
         "kind": "none"
-      }
+      },
+      "unique_keys": [
+        [
+          "employee_id",
+          "project_id"
+        ]
+      ]
     },
     {
       "name": "projects",

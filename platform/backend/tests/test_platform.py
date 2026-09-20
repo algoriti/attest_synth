@@ -1096,7 +1096,7 @@ def test_positive_class_is_inferred_not_assumed():
     )
     table, _ = profile_csv(reference, "clients")
     result = predictive_utility(
-        reference.copy(), reference, table, "subscribed", "classification", seed=5
+        reference.iloc[:300].copy(), reference.iloc[:300], table, "subscribed", "classification", seed=5, heldout=reference.iloc[300:]
     )
     assert "error" not in result
     # "yes" is the minority label and therefore the subject of the task.
@@ -1104,7 +1104,7 @@ def test_positive_class_is_inferred_not_assumed():
     assert 0.0 <= result["trained_on_real"]["average_precision"] <= 1.0
 
 
-def test_multiclass_target_is_refused_rather_than_mis_scored():
+def test_multiclass_target_uses_balanced_accuracy():
     from synthetic_platform.evaluate import predictive_utility
 
     rng = np.random.default_rng(19)
@@ -1113,6 +1113,58 @@ def test_multiclass_target_is_refused_rather_than_mis_scored():
     )
     table, _ = profile_csv(reference, "t")
     result = predictive_utility(
-        reference.copy(), reference, table, "grade", "classification", seed=5
+        reference.iloc[:200].copy(), reference.iloc[:200], table, "grade", "classification", seed=5, heldout=reference.iloc[200:]
     )
-    assert "3 classes" in result["trained_on_real"]["error"]
+    assert result["metric"] == "balanced_accuracy"
+    assert 0 <= result["trained_on_real"]["balanced_accuracy"] <= 1
+
+
+def test_extracted_weekday_is_a_category_not_a_number():
+    """A weekday is a factor with seven levels, not a quantity.
+
+    Regression: typed as an integer it reached the tree-based engine as a
+    continuous variable. A leaf holding one weekday then has zero variance, which
+    arfpy cannot fit a distribution to — reported from a real call log as
+    ArfLeafDegeneracyError naming three '*_weekday' columns with 7 distinct values.
+    It is also wrong on its own terms: as a number, Sunday sits six units from
+    Monday rather than next to it.
+    """
+    rng = np.random.default_rng(31)
+    n = 300
+    start = pd.Timestamp("2026-01-05", tz="UTC") + pd.to_timedelta(
+        rng.integers(0, 60 * 24 * 60, n), unit="min"
+    )
+    frame = pd.DataFrame({"called_at": start, "duration": rng.integers(10, 900, n)})
+
+    table, _ = profile_csv(frame, "calls")
+    caps = get_engine("arf").capabilities()
+    rewritten = apply_suggestions(table, suggest_for_table(table, caps, 0.0, frame))
+
+    weekday = rewritten.column("called_at_weekday")
+    assert weekday.type == ColumnType.CATEGORY
+    assert weekday.allowed_values == list(range(7))
+
+
+def test_timestamp_rebuild_works_from_a_categorical_weekday():
+    """Storing weekday as a category must not break the arithmetic that rebuilds it."""
+    rng = np.random.default_rng(37)
+    n = 200
+    start = pd.Timestamp("2026-01-05", tz="UTC") + pd.to_timedelta(
+        rng.integers(0, 30 * 24 * 60, n), unit="min"
+    )
+    frame = pd.DataFrame({"called_at": start, "duration": rng.integers(10, 900, n)})
+
+    table, _ = profile_csv(frame, "calls")
+    caps = get_engine("arf").capabilities()
+    rewritten = apply_suggestions(table, suggest_for_table(table, caps, 0.0, frame))
+
+    spec = SyntheticDataSpec(
+        name="calls", mode=Mode.LEARNED_TABLE, purpose=Purpose.ML_DEVELOPMENT,
+        engine="independent", seed=11, tables=[rewritten],
+    )
+    result = run(spec, sources={"calls": frame}, rows=120)["frames"]["calls"]
+
+    rebuilt = pd.to_datetime(result["called_at"], utc=True)
+    assert rebuilt.notna().all()
+    # Every rebuilt value lands inside the single anchor week.
+    assert (rebuilt.max() - rebuilt.min()).total_seconds() / 86400 <= 7
