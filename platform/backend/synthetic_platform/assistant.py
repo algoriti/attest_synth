@@ -15,7 +15,7 @@ from .spec import (
     Origin,
     Provenance,
 )
-from .validator import validate
+from .validator import validate, _expression_may_be_null
 from .engines.base import get_engine, choose_engine
 
 
@@ -40,6 +40,175 @@ def configuration():
     settings=_settings()
     return {'configured':bool(settings['key']), 'model':settings['model'],
             'data_policy':'Only your instructions and the platform specification format are sent. Uploaded records are never included.'}
+
+
+def schema_manifest(spec: SyntheticDataSpec) -> dict:
+    """The complete and deliberately small disclosure used for upload revisions."""
+    return {
+        "dataset": spec.name,
+        "mode": spec.mode.value,
+        "tables": [
+            {
+                "name": table.name,
+                "primary_key": table.primary_key,
+                "columns": [
+                    {
+                        "name": column.name,
+                        "type": column.type.value,
+                        "role": column.role.value,
+                        "nullable": column.nullable,
+                    }
+                    for column in table.columns
+                ],
+            }
+            for table in spec.tables
+        ],
+    }
+
+
+def revise_uploaded_spec(prompt: str, spec: SyntheticDataSpec, _repair: str | None = None) -> dict:
+    """Propose schema changes without sending records, values, statistics or hashes."""
+    if not configuration()["configured"]:
+        raise ValueError("The administrator must configure the hosted model first.")
+    settings = _settings()
+    manifest = schema_manifest(spec)
+    contract = (
+        'Return one compact JSON object: {"changes":[Change],"assumptions":[string]}. '
+        'Change is one of: '
+        '{"action":"add_column","table":string,"column":Column}, '
+        '{"action":"update_column","table":string,"column_name":string,"column":Column}, or '
+        '{"action":"add_constraint","table":string,"constraint":Constraint}. '
+        'Column uses the same compact Column contract below. New columns cannot be learned, identifiers, '
+        'foreign keys or aggregates; use rule, derived, constant or empty. Do not rename columns. '
+        'Use only existing column names inside formulas. Return no generated records or example values '
+        'taken from data. '+_compact_contract().split('Column: ',1)[1]
+    )
+    instruction = (
+        'You revise a synthetic-data specification created from an uploaded dataset. You receive only a '
+        'schema manifest: table and column names, types, roles and nullability. You never receive records, '
+        'previews, statistics, hashes, category values or identifiers. Follow the requested transformation '
+        'without claiming it was learned from the data. Every proposed change is an unconfirmed assumption. '
+        'Rule columns are sampled independently by this platform. Never claim that independently sampled rule '
+        'columns are correlated with uploaded columns or with one another. If the user requests a relationship '
+        'that the available schema and formula vocabulary cannot represent honestly, omit those columns and '
+        'state the limitation in assumptions instead of inventing an unrelated score. Never use {"const":null} '
+        'in a formula; represent missingness tests with is_null or not_null. '
+        + contract
+    )
+    user = "Requested change:\n" + prompt + "\n\nApproved schema manifest:\n" + json.dumps(manifest)
+    if _repair:
+        user += "\n\nThe prior plan was rejected. Regenerate it and correct: " + _repair
+    payload = {
+        "model": settings["model"],
+        "messages": [{"role":"system","content":instruction},{"role":"user","content":user}],
+        "response_format":{"type":"json_object"},
+        "reasoning_effort":settings["reasoning"],
+        "max_completion_tokens":12000,
+    }
+    base=settings['base'].rstrip('/')
+    if not base.startswith('https://'):
+        raise ValueError('Hosted model connections require an HTTPS base URL.')
+    request=urllib.request.Request(base+'/chat/completions',data=json.dumps(payload).encode(),headers={
+        'Authorization':'Bearer '+settings['key'],'Content-Type':'application/json','Accept':'application/json','User-Agent':'SyntheticDataPlatform/0.1'})
+    try:
+        with urllib.request.urlopen(request,timeout=120) as response:
+            raw=response.read(512*1024+1)
+            if len(raw)>512*1024:raise ValueError('Model response exceeded the supported size.')
+    except urllib.error.HTTPError as exc:
+        detail=''
+        try:
+            body=json.loads(exc.read(4096));error=body.get('error',{})
+            detail=str(error.get('message',''))[:300] if isinstance(error,dict) else str(error)[:300]
+        except (ValueError,AttributeError):detail='Provider gateway rejected the request.'
+        raise ValueError(f'Model provider returned HTTP {exc.code}. {detail.replace(settings["key"],"[redacted]")}') from None
+    except (urllib.error.URLError,TimeoutError):
+        raise ValueError('Could not reach the model provider within the request timeout.') from None
+    try:
+        plan=json.loads(_json_object(json.loads(raw)['choices'][0]['message']['content']))
+        if not isinstance(plan.get('changes'),list):raise ValueError("'changes' must be a list")
+        revised=spec.model_copy(deep=True);summaries=[]
+        relationship_keys={(r.child_table,r.child_key) for r in revised.relationships}
+        for item in plan['changes']:
+            if not isinstance(item,dict):raise ValueError('every change must be an object')
+            table=revised.table(str(item.get('table','')))
+            if table is None:raise ValueError(f"unknown table '{item.get('table')}'")
+            action=item.get('action')
+            if action in {'add_column','update_column'}:
+                raw_column=item.get('column')
+                if not isinstance(raw_column,dict):raise ValueError(f'{action} needs a column')
+                container={'mode':'schema_rules','tables':[{'name':'t','columns':[dict(raw_column)]}]}
+                _normalize_expression_operators(container)
+                duration_repairs=_normalize_duration_argument_order(container)
+                _sanitize_model_vocabulary(container)
+                column=Column.model_validate(container['tables'][0]['columns'][0])
+                nullable_repair=False
+                if column.role == SemanticRole.DERIVED and not column.nullable and _expression_may_be_null(column.formula, table):
+                    column.nullable=True
+                    nullable_repair=True
+                if column.role in {SemanticRole.LEARNED,SemanticRole.IDENTIFIER,SemanticRole.FOREIGN_KEY,SemanticRole.AGGREGATE}:
+                    raise ValueError(f"'{column.name}' uses role '{column.role.value}', which is not allowed for an AI-added upload column")
+                column.provenance=Provenance(origin=Origin.ASSISTANT_PROPOSED,detail=f"Proposed from the user's instruction using schema metadata only; no uploaded values were sent.")
+                if action=='add_column':
+                    if table.column(column.name):raise ValueError(f"column '{column.name}' already exists")
+                    table.columns.append(column);summaries.append(f"Added {table.name}.{column.name} as {column.role.value}.")
+                else:
+                    old_name=str(item.get('column_name',''))
+                    old=table.column(old_name)
+                    if old is None:raise ValueError(f"unknown column '{old_name}'")
+                    if old_name==table.primary_key or (table.name,old_name) in relationship_keys:raise ValueError(f"key column '{old_name}' cannot be changed")
+                    if column.name!=old_name:raise ValueError('column renaming is not supported in this workflow')
+                    table.columns[table.columns.index(old)]=column;summaries.append(f"Updated {table.name}.{old_name} to {column.role.value}.")
+                if duration_repairs:
+                    summaries.append(f"Corrected start/end argument order in {table.name}.{column.name}.")
+                if nullable_repair:
+                    summaries.append(f"Marked {table.name}.{column.name} nullable because its formula can receive missing inputs.")
+            elif action=='add_constraint':
+                from .spec import Constraint
+                constraint=Constraint.model_validate(item.get('constraint'))
+                constraint.provenance=Provenance(origin=Origin.ASSISTANT_PROPOSED,detail="Proposed from schema metadata only.")
+                table.constraints.append(constraint);summaries.append(f"Added {constraint.operator.value} constraint to {table.name}.")
+            else:raise ValueError(f"unsupported change action '{action}'")
+        if re.search(r"\b(correlat\w*|highly related|relationship|depend\w*|associat\w*)\b", prompt, re.I):
+            original={(table.name,column.name) for table in spec.tables for column in table.columns}
+            added_rules=[
+                f"{table.name}.{column.name}" for table in revised.tables for column in table.columns
+                if (table.name,column.name) not in original and column.role == SemanticRole.RULE
+            ]
+            # Every newly added rule column is independently sampled. None can satisfy
+            # an explicit relationship request, whatever the column happens to be named.
+            unsupported=added_rules
+            if unsupported:
+                unsupported_pairs={tuple(name.split('.',1)) for name in unsupported}
+                for table in revised.tables:
+                    table.columns=[
+                        column for column in table.columns
+                        if (table.name,column.name) not in unsupported_pairs
+                    ]
+                summaries=[
+                    summary for summary in summaries
+                    if not any(name in summary for name in unsupported)
+                ]
+                removed_names={name.split('.',1)[1] for name in unsupported}
+                plan['assumptions']=[
+                    assumption for assumption in plan.get('assumptions',[])
+                    if not any(name in str(assumption) for name in removed_names)
+                    and "performance" not in str(assumption).lower()
+                ]
+                plan.setdefault('assumptions',[]).append(
+                    "Omitted independently sampled performance or quality fields because they cannot satisfy "
+                    "the requested relationship. Linked outcome data or a supported conditional model is required."
+                )
+        caps=get_engine(choose_engine(revised)).capabilities();validation=validate(revised,caps)
+        if not validation.ok:raise ValueError('; '.join(f.message for f in validation.errors))
+    except (ValueError,KeyError,IndexError,TypeError) as exc:
+        if _repair is None:return revise_uploaded_spec(prompt,spec,_schema_error_summary(exc))
+        raise ValueError('The assistant could not produce a valid transformation plan after one correction: '+_schema_error_summary(exc)) from None
+    return {
+        'spec':revised.model_dump(mode='json'),'changes':summaries,
+        'assumptions':[str(value)[:500] for value in plan.get('assumptions',[]) if isinstance(value,str)],
+        'validation':validation.as_dict(),'model':configuration()['model'],
+        'disclosure':{'manifest':manifest,'excluded':['record values','previews','summary statistics','category values','row counts','file name','file hash','upload identifier']},
+    }
 
 
 
@@ -108,6 +277,27 @@ def _normalize_expression_operators(value) -> None:
             _normalize_expression_operators(child)
 
 
+def _normalize_duration_argument_order(value) -> int:
+    """Repair an unambiguous end/start reversal in duration expressions."""
+    repairs=0
+    if isinstance(value,dict):
+        args=value.get('args')
+        if value.get('op') in {'duration_hours','duration_seconds'} and isinstance(args,list) and len(args)==2:
+            first=args[0].get('col','') if isinstance(args[0],dict) else ''
+            second=args[1].get('col','') if isinstance(args[1],dict) else ''
+            start=re.compile(r"(^|_)(time_?in|start|started|assigned|required)(_|$)",re.I)
+            end=re.compile(r"(^|_)(time_?out|end|ended|completion|completed|submission|submitted)(_|$)",re.I)
+            if end.search(first) and start.search(second):
+                value['args']=[args[1],args[0]]
+                repairs+=1
+        for child in value.values():
+            repairs+=_normalize_duration_argument_order(child)
+    elif isinstance(value,list):
+        for child in value:
+            repairs+=_normalize_duration_argument_order(child)
+    return repairs
+
+
 def _default_rule(column_type: str) -> dict:
     if column_type == "boolean":
         return {"kind": "choice", "values": [True, False]}
@@ -146,6 +336,11 @@ def _sanitize_model_vocabulary(proposal: dict) -> None:
         "foreign key": "foreign_key", "foreign-key": "foreign_key", "id": "identifier",
     }
     proposal["mode"] = mode_aliases.get(proposal.get("mode"), proposal.get("mode", "schema_rules"))
+    # A proposal that links tables is relational by definition. The model sometimes
+    # kept "schema_rules" while declaring relationships, which the validator then
+    # rejected; the mode follows mechanically from the proposal's own structure.
+    if proposal.get("relationships"):
+        proposal["mode"] = "relational_rules"
     proposal["purpose"] = purpose_aliases.get(
         proposal.get("purpose"), proposal.get("purpose", "software_testing")
     )
@@ -189,6 +384,11 @@ def _sanitize_model_vocabulary(proposal: dict) -> None:
         for constraint in table.get("constraints", []):
             if isinstance(constraint, dict):
                 constraint.pop("provenance", None)
+                names = constraint.get("columns") or []
+                if constraint.get("operator") == "implies_null" and len(names) == 2:
+                    for column in table.get("columns", []):
+                        if isinstance(column, dict) and column.get("name") == names[1]:
+                            column["nullable"] = True
     for relationship in proposal.get("relationships", []):
         if isinstance(relationship, dict):
             relationship.pop("provenance", None)
@@ -287,10 +487,22 @@ def _enforce_explicit_row_requirements(prompt: str, spec: SyntheticDataSpec) -> 
                 rf"\b(?P<qualifier>approximately|about|around|roughly)?\s*"
                 rf"(?P<count>[1-9][\d,]*)\s+(?:synthetic\s+)?{re.escape(alias)}\b"
             )
-            match = pattern.search(text)
-            if match and text[max(0, match.start() - 3):match.start()] != "to ":
-                break
             match = None
+            for candidate in pattern.finditer(text):
+                # Only a table *total* is enforced. The upper end of a range ("4 to 6
+                # assessments", "between 5 and 40 results") or a per-parent count
+                # ("each course has 6 assessments") is a children-per-parent bound, and
+                # copying it into the table's total rows made every such request
+                # infeasible after the model had proposed it correctly.
+                before = text[max(0, candidate.start() - 80):candidate.start()]
+                clause = re.split(r"[.;:\n]", before)[-1]
+                is_range_end = re.search(r"\d[\d,]*\s*(to|and|or|-|–)\s*$", before)
+                is_per_parent = re.search(r"\b(each|per|every)\b", clause)
+                if not (is_range_end or is_per_parent):
+                    match = candidate
+                    break
+            if match:
+                break
         if match is None:
             continue
         count = int(match.group("count").replace(",", ""))
@@ -409,11 +621,15 @@ def _reconcile_executable_constraints(spec: SyntheticDataSpec) -> list[str]:
                 len(relationships) == 2
                 and set(key) == {relationship.child_key for relationship in relationships}
             )
-            if is_primary_key or is_junction_pair:
+            only = table.column(key[0]) if len(key) == 1 else None
+            is_unique_list = (
+                only is not None and only.rule is not None and only.rule.kind.value == "choice"
+            )
+            if is_primary_key or is_junction_pair or is_unique_list:
                 supported_unique_keys.append(key)
             else:
                 changes.append(
-                    f"{table.name} uniqueness on ({', '.join(key)}) was omitted because this engine only constructs primary-key uniqueness and compound-unique junction pairs; the generated primary key remains unique."
+                    f"{table.name} uniqueness on ({', '.join(key)}) was omitted because this engine only constructs primary-key uniqueness, unique value lists and compound-unique junction pairs; the generated primary key remains unique."
                 )
         table.unique_keys = supported_unique_keys
 
@@ -481,6 +697,22 @@ def propose(prompt, _repair=None):
         'Use no formal privacy claims. Do not invent a user confirmation. '
         'Every independently generated non-ID/non-FK column MUST have role rule and a rule object. Example: '
         '{"name":"price","type":"number","role":"rule","rule":{"kind":"number_range","start":1,"end":50}}. '
+        # The schema alone was not enough: models guessed keys such as "table" or
+        # "column" for these two lists and failed validation, so each gets a concrete
+        # example in the same style as the rule example above.
+        'A child value bounded by its parent uses cross_table_constraints, for example '
+        '{"parent_table":"assessments","child_table":"results","child_key":"assessment_id",'
+        '"parent_column":"maximum_score","child_column":"score_obtained","operator":"less_or_equal"} '
+        '(read as child_column operator parent_column: score_obtained <= maximum_score). '
+        'A parent column summarising its children uses aggregates, for example '
+        '{"parent_table":"students","child_table":"results","child_key":"student_id",'
+        '"target_column":"result_count","operation":"count"}; the target column must exist on the '
+        'parent with role aggregate. '
+        'Codes, names and other values that must not repeat get a unique constraint '
+        '{"operator":"unique","columns":["course_code"]} and a choice list with at least as many values '
+        'as rows; lists written in parallel with the same length (codes and their names) stay paired by position. '
+        'A value that must be empty for some status uses {"operator":"implies_null",'
+        '"columns":["submission_status","score_obtained"],"values":["missing"]}. '
         'Use derived only for a same-table formula. Use aggregate only for a supported direct-child '
         'count/sum/mean/min/max grouped by one parent key. The platform cannot compute employee-by-month '
         'or other entity-period summaries across several activity tables: omit such summary tables rather '

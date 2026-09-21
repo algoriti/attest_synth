@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from faker import Faker
 
-from ..spec import Column, ColumnType, Rule, RuleKind, SemanticRole, SyntheticDataSpec, Table
+from ..spec import Column, ConstraintOperator, ColumnType, Rule, RuleKind, SemanticRole, SyntheticDataSpec, Table
 from .base import (
     EngineAdapter,
     GenerationOutcome,
@@ -60,6 +60,16 @@ class RuleEngine(EngineAdapter):
         faker.seed_instance(spec.seed)
         warnings: list[str] = []
 
+        # Columns declared unique draw their list values without replacement. Lists of
+        # the same length share one permutation, so values written in parallel — a
+        # course code list and its course name list — stay paired by position instead
+        # of producing "CS101: Modern Art" next to "CS301: Modern Art".
+        unique_columns = {
+            c.columns[0] for c in table.constraints
+            if c.operator == ConstraintOperator.UNIQUE and len(c.columns) == 1
+        } | {key[0] for key in table.unique_keys if len(key) == 1}
+        permutations: dict[int, np.ndarray] = {}
+
         data: dict[str, object] = {}
         for column in table.columns:
             if column.role in (
@@ -78,6 +88,16 @@ class RuleEngine(EngineAdapter):
                     "or mark the column derived."
                 )
                 data[column.name] = [None] * rows
+                continue
+            if column.name in unique_columns and column.rule.kind == RuleKind.CHOICE:
+                values = list(column.rule.values)
+                if rows > len(values):
+                    raise ValueError(
+                        f"'{table.name}.{column.name}' must be unique but its list has only "
+                        f"{len(values)} values for {rows} rows. Add values or reduce the rows."
+                    )
+                order = permutations.setdefault(len(values), rng.permutation(len(values)))
+                data[column.name] = [values[i] for i in order[:rows]]
                 continue
             data[column.name] = _sample(column, column.rule, rows, rng, faker)
 

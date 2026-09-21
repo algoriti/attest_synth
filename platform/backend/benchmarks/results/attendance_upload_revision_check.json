@@ -1,0 +1,474 @@
+{
+  "status": "evidence_failed",
+  "provider": "Groq",
+  "model": "openai/gpt-oss-120b",
+  "elapsed_seconds": 14.693,
+  "privacy_check": {
+    "sent_to_provider": "User instruction plus dataset/table names and column name, type, role, and nullability only.",
+    "excluded": [
+      "record values",
+      "previews",
+      "summary statistics",
+      "category values",
+      "row counts",
+      "file name",
+      "file hash",
+      "upload identifier"
+    ],
+    "manifest_matches_platform_disclosure": true
+  },
+  "source_summary_local_only": {
+    "rows": 28549,
+    "columns": 12,
+    "profile_quality_issue_count": 5,
+    "profile_quality_issue_kinds": [
+      "implausible_duration"
+    ]
+  },
+  "proposal": {
+    "changes": [
+      "Added attendance.missing_clock_out as derived.",
+      "Added attendance.open_session as derived.",
+      "Added attendance.shift_duration_seconds as derived.",
+      "Corrected start/end argument order in attendance.shift_duration_seconds.",
+      "Added attendance.shift_duration_minutes as derived.",
+      "Corrected start/end argument order in attendance.shift_duration_minutes.",
+      "Added attendance.shift_duration_hours as derived.",
+      "Corrected start/end argument order in attendance.shift_duration_hours.",
+      "Added attendance.overtime_flag as derived.",
+      "Corrected start/end argument order in attendance.overtime_flag.",
+      "Added attendance.shift_overtime_hours as derived.",
+      "Corrected start/end argument order in attendance.shift_overtime_hours."
+    ],
+    "assumptions": [
+      "missing_clock_out is derived assuming a null attendance_time_out means the clock\u2011out was not recorded.",
+      "open_session assumes attendance_is_active marks an ongoing session and a missing clock\u2011out indicates it is still open.",
+      "Shift duration fields are computed from attendance_time_in and attendance_time_out; if attendance_time_out is null the derived duration values are null.",
+      "A standard shift length of 8 hours is assumed for overtime detection; this threshold is not based on any real schedule data.",
+      "overtime_flag and shift_overtime_hours are derived from the 8\u2011hour threshold and represent synthetic overtime indicators.",
+      "All synthetic rule\u2011generated columns are independent of each other and of the existing attendance columns beyond being generated per row.",
+      "Omitted independently sampled performance or quality fields because they cannot satisfy the requested relationship. Linked outcome data or a supported conditional model is required."
+    ],
+    "added_columns": [
+      {
+        "name": "missing_clock_out",
+        "type": "boolean",
+        "role": "derived",
+        "nullable": false,
+        "formula_references": [
+          "attendance_time_out"
+        ],
+        "formula": {
+          "op": "is_null",
+          "args": [
+            {
+              "op": null,
+              "args": [],
+              "col": "attendance_time_out",
+              "const": null,
+              "tz_offset_hours": 0.0
+            }
+          ],
+          "col": null,
+          "const": null,
+          "tz_offset_hours": 0.0
+        },
+        "rule_kind": null,
+        "provenance_origin": "assistant_proposed",
+        "provenance_detail": "Proposed from the user's instruction using schema metadata only; no uploaded values were sent.",
+        "generated_non_null_fraction": 1.0,
+        "generated_distinct_count": 2
+      },
+      {
+        "name": "open_session",
+        "type": "boolean",
+        "role": "derived",
+        "nullable": false,
+        "formula_references": [
+          "attendance_is_active",
+          "attendance_time_out"
+        ],
+        "formula": {
+          "op": "and",
+          "args": [
+            {
+              "op": null,
+              "args": [],
+              "col": "attendance_is_active",
+              "const": null,
+              "tz_offset_hours": 0.0
+            },
+            {
+              "op": "is_null",
+              "args": [
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "attendance_time_out",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                }
+              ],
+              "col": null,
+              "const": null,
+              "tz_offset_hours": 0.0
+            }
+          ],
+          "col": null,
+          "const": null,
+          "tz_offset_hours": 0.0
+        },
+        "rule_kind": null,
+        "provenance_origin": "assistant_proposed",
+        "provenance_detail": "Proposed from the user's instruction using schema metadata only; no uploaded values were sent.",
+        "generated_non_null_fraction": 1.0,
+        "generated_distinct_count": 2
+      },
+      {
+        "name": "shift_duration_seconds",
+        "type": "number",
+        "role": "derived",
+        "nullable": true,
+        "formula_references": [
+          "attendance_time_in",
+          "attendance_time_out"
+        ],
+        "formula": {
+          "op": "duration_seconds",
+          "args": [
+            {
+              "op": null,
+              "args": [],
+              "col": "attendance_time_in",
+              "const": null,
+              "tz_offset_hours": 0.0
+            },
+            {
+              "op": null,
+              "args": [],
+              "col": "attendance_time_out",
+              "const": null,
+              "tz_offset_hours": 0.0
+            }
+          ],
+          "col": null,
+          "const": null,
+          "tz_offset_hours": 0.0
+        },
+        "rule_kind": null,
+        "provenance_origin": "assistant_proposed",
+        "provenance_detail": "Proposed from the user's instruction using schema metadata only; no uploaded values were sent.",
+        "generated_non_null_fraction": 0.994,
+        "generated_distinct_count": 1988
+      },
+      {
+        "name": "shift_duration_minutes",
+        "type": "number",
+        "role": "derived",
+        "nullable": true,
+        "formula_references": [
+          "attendance_time_in",
+          "attendance_time_out"
+        ],
+        "formula": {
+          "op": "div",
+          "args": [
+            {
+              "op": "duration_seconds",
+              "args": [
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "attendance_time_in",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                },
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "attendance_time_out",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                }
+              ],
+              "col": null,
+              "const": null,
+              "tz_offset_hours": 0.0
+            },
+            {
+              "op": null,
+              "args": [],
+              "col": null,
+              "const": 60,
+              "tz_offset_hours": 0.0
+            }
+          ],
+          "col": null,
+          "const": null,
+          "tz_offset_hours": 0.0
+        },
+        "rule_kind": null,
+        "provenance_origin": "assistant_proposed",
+        "provenance_detail": "Proposed from the user's instruction using schema metadata only; no uploaded values were sent.",
+        "generated_non_null_fraction": 0.994,
+        "generated_distinct_count": 1988
+      },
+      {
+        "name": "shift_duration_hours",
+        "type": "number",
+        "role": "derived",
+        "nullable": true,
+        "formula_references": [
+          "attendance_time_in",
+          "attendance_time_out"
+        ],
+        "formula": {
+          "op": "duration_hours",
+          "args": [
+            {
+              "op": null,
+              "args": [],
+              "col": "attendance_time_in",
+              "const": null,
+              "tz_offset_hours": 0.0
+            },
+            {
+              "op": null,
+              "args": [],
+              "col": "attendance_time_out",
+              "const": null,
+              "tz_offset_hours": 0.0
+            }
+          ],
+          "col": null,
+          "const": null,
+          "tz_offset_hours": 0.0
+        },
+        "rule_kind": null,
+        "provenance_origin": "assistant_proposed",
+        "provenance_detail": "Proposed from the user's instruction using schema metadata only; no uploaded values were sent.",
+        "generated_non_null_fraction": 0.994,
+        "generated_distinct_count": 1988
+      },
+      {
+        "name": "overtime_flag",
+        "type": "boolean",
+        "role": "derived",
+        "nullable": true,
+        "formula_references": [
+          "attendance_time_in",
+          "attendance_time_out"
+        ],
+        "formula": {
+          "op": "gt",
+          "args": [
+            {
+              "op": "duration_hours",
+              "args": [
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "attendance_time_in",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                },
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "attendance_time_out",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                }
+              ],
+              "col": null,
+              "const": null,
+              "tz_offset_hours": 0.0
+            },
+            {
+              "op": null,
+              "args": [],
+              "col": null,
+              "const": 8,
+              "tz_offset_hours": 0.0
+            }
+          ],
+          "col": null,
+          "const": null,
+          "tz_offset_hours": 0.0
+        },
+        "rule_kind": null,
+        "provenance_origin": "assistant_proposed",
+        "provenance_detail": "Proposed from the user's instruction using schema metadata only; no uploaded values were sent.",
+        "generated_non_null_fraction": 1.0,
+        "generated_distinct_count": 2
+      },
+      {
+        "name": "shift_overtime_hours",
+        "type": "number",
+        "role": "derived",
+        "nullable": true,
+        "formula_references": [
+          "attendance_time_in",
+          "attendance_time_out"
+        ],
+        "formula": {
+          "op": "if_else",
+          "args": [
+            {
+              "op": "gt",
+              "args": [
+                {
+                  "op": "duration_hours",
+                  "args": [
+                    {
+                      "op": null,
+                      "args": [],
+                      "col": "attendance_time_in",
+                      "const": null,
+                      "tz_offset_hours": 0.0
+                    },
+                    {
+                      "op": null,
+                      "args": [],
+                      "col": "attendance_time_out",
+                      "const": null,
+                      "tz_offset_hours": 0.0
+                    }
+                  ],
+                  "col": null,
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                },
+                {
+                  "op": null,
+                  "args": [],
+                  "col": null,
+                  "const": 8,
+                  "tz_offset_hours": 0.0
+                }
+              ],
+              "col": null,
+              "const": null,
+              "tz_offset_hours": 0.0
+            },
+            {
+              "op": "sub",
+              "args": [
+                {
+                  "op": "duration_hours",
+                  "args": [
+                    {
+                      "op": null,
+                      "args": [],
+                      "col": "attendance_time_in",
+                      "const": null,
+                      "tz_offset_hours": 0.0
+                    },
+                    {
+                      "op": null,
+                      "args": [],
+                      "col": "attendance_time_out",
+                      "const": null,
+                      "tz_offset_hours": 0.0
+                    }
+                  ],
+                  "col": null,
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                },
+                {
+                  "op": null,
+                  "args": [],
+                  "col": null,
+                  "const": 8,
+                  "tz_offset_hours": 0.0
+                }
+              ],
+              "col": null,
+              "const": null,
+              "tz_offset_hours": 0.0
+            },
+            {
+              "op": null,
+              "args": [],
+              "col": null,
+              "const": 0,
+              "tz_offset_hours": 0.0
+            }
+          ],
+          "col": null,
+          "const": null,
+          "tz_offset_hours": 0.0
+        },
+        "rule_kind": null,
+        "provenance_origin": "assistant_proposed",
+        "provenance_detail": "Proposed from the user's instruction using schema metadata only; no uploaded values were sent.",
+        "generated_non_null_fraction": 1.0,
+        "generated_distinct_count": 986
+      }
+    ],
+    "validation_ok": true
+  },
+  "execution": {
+    "engine": "independent",
+    "generated_rows": 2000,
+    "generated_columns": [
+      "primary_key",
+      "attendance_unique_id",
+      "attendance_time_in",
+      "attendance_time_out",
+      "attendance_is_active",
+      "attendance_created_by",
+      "attendance_created_date",
+      "attendance_user_id",
+      "sign_in_date",
+      "entry_or_exit_status",
+      "late_status",
+      "extra_hours",
+      "missing_clock_out",
+      "open_session",
+      "shift_duration_seconds",
+      "shift_duration_minutes",
+      "shift_duration_hours",
+      "overtime_flag",
+      "shift_overtime_hours"
+    ],
+    "all_constraints_passed": true,
+    "failed_checks": [],
+    "semantic_checks": [
+      {
+        "column": "shift_duration_hours",
+        "check": "non_negative",
+        "passed": false,
+        "failing_rows": 1002
+      },
+      {
+        "column": "shift_duration_minutes",
+        "check": "non_negative",
+        "passed": false,
+        "failing_rows": 1002
+      }
+    ],
+    "open_assumption_count": 10
+  },
+  "ml_review": {
+    "suitable_for": [
+      "synthetic-data platform and pipeline testing",
+      "exploratory time-behavior feature engineering",
+      "demonstrating schema, provenance, and generation workflows"
+    ],
+    "not_supported_for": [
+      "training or validating a real employee-performance predictor",
+      "employment decisions or employee ranking",
+      "causal claims about attendance and performance"
+    ],
+    "target_leakage_flags": [],
+    "missing_evidence": [
+      "verified task and project outcomes",
+      "quality, rework, and reporting measures",
+      "a defined and independently observed performance target",
+      "an entity-aware or time-based holdout evaluation for that target",
+      "a formal privacy guarantee"
+    ]
+  }
+}

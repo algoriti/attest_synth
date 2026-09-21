@@ -1,0 +1,7 @@
+Improve this uploaded attendance design for synthetic time-behavior analysis and ML prototyping.
+
+Add useful row-level time-behavior indicators that can be computed from the existing columns, including missing clock-out/open-session behavior, lateness, overtime, or shift-duration behavior where the visible schema supports a valid formula.
+
+Also propose a small number of performance-behavior fields that are highly related within the synthetic scenario. Attendance alone is not evidence of employee performance: do not describe any performance field as observed, learned, causal, or suitable for employment decisions. If a performance field cannot be derived from an existing attendance column, make it an explicit rule-generated synthetic assumption and disclose that task, project, quality, reporting, and verified outcome data are missing.
+
+Keep every existing column. Do not create employee summaries, monthly aggregates, new tables, identifiers based on real values, or formulas that require unavailable columns. The result is for platform testing, exploratory analytics, and ML pipeline development only.

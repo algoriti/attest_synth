@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 import pandas as pd
 
 from . import __version__
-from .derive import DerivationError, apply_derived
+from .derive import DerivationError, apply_derived, apply_null_rules
 from .engines import base as engine_base
 from .engines.relational import (
     RelationalRuleEngine,
@@ -37,7 +37,23 @@ from .suggest import prepare_source
 from .validator import validate
 from .verification import schema_checks, relationship_checks, frame_hash
 from .splitting import split_source
-from .relational_operations import aggregate, check_cross_table
+from .relational_operations import aggregate, check_cross_table, enforce_cross_table
+
+
+def _derive(frame: pd.DataFrame, table) -> tuple[pd.DataFrame, list[dict]]:
+    """Compute derived columns, then empty values the specification says are empty.
+
+    Formulas that read a column that was just emptied are computed again, so a derived
+    value never reflects a score that the rules say does not exist.
+    """
+    frame, trace = apply_derived(frame, table)
+    frame, null_trace = apply_null_rules(frame, table)
+    emptied = {entry["column"] for entry in null_trace if entry["computed_rows"]}
+    if emptied and any(
+        c.formula is not None and c.formula.referenced_columns() & emptied for c in table.columns
+    ):
+        frame, trace = apply_derived(frame, table)
+    return frame, trace + null_trace
 
 
 class PipelineError(RuntimeError):
@@ -105,7 +121,21 @@ def run(
 
     outcome = engine.generate(spec, table, requested, source)
 
-    frame, derivation_trace = apply_derived(outcome.frame, table)
+    # A learned engine models only columns present in the approved source. Rule
+    # columns added later through the editor or schema-only assistant are generated
+    # locally and merged by row; uploaded records are never needed for those values.
+    rule_columns = [column for column in table.columns if column.role == SemanticRole.RULE]
+    if spec.mode == Mode.LEARNED_TABLE and rule_columns:
+        from .engines.rules import RuleEngine
+        rule_outcome = RuleEngine().generate(spec, table, requested, None)
+        for column in rule_columns:
+            if column.name in rule_outcome.frame:
+                outcome.frame[column.name] = rule_outcome.frame[column.name].to_numpy()
+        outcome.warnings.append(
+            f"{len(rule_columns)} declared rule column(s) were generated locally and merged with learned output."
+        )
+
+    frame, derivation_trace = _derive(outcome.frame, table)
     outcome.frame = frame
     outcome.derivation_trace = derivation_trace
 
@@ -151,10 +181,36 @@ def _run_relational(
     frames: dict[str, pd.DataFrame] = {}
     constraint_results: dict[str, list[dict]] = {}
 
+    # Tables arrive in generation order, so every parent is finished before its
+    # children read its values. A child's cross-table rules are enforced before its
+    # derived columns are computed, so formulas see the repaired values.
+    import numpy as np
+    enforcement_rng = np.random.default_rng(spec.seed + 7919)
+    cross_table_repairs: list[dict] = []
     for name, outcome in outcomes.items():
         table = spec.table(name)
         assert table is not None
-        frame, trace = apply_derived(outcome.frame, table)
+        frames[name] = outcome.frame
+        for entry in enforce_cross_table(spec, frames, name, enforcement_rng):
+            cross_table_repairs.append(entry)
+            if entry["repaired_rows"]:
+                column = entry["column"]
+                outcome.repairs[column] = outcome.repairs.get(column, 0) + entry["repaired_rows"]
+                # Upper bound on the repaired share: never understate how much changed.
+                total = max(len(outcome.frame), 1)
+                outcome.repaired_row_fraction = min(
+                    1.0, outcome.repaired_row_fraction + entry["repaired_rows"] / total
+                )
+                outcome.warnings.append(
+                    f"{entry['repaired_rows']:,} rows of '{name}.{column}' were redrawn to satisfy "
+                    f"{entry['relationship']}."
+                )
+            if entry["unsatisfiable_rows"]:
+                outcome.warnings.append(
+                    f"{entry['unsatisfiable_rows']:,} rows of '{name}.{entry['column']}' cannot satisfy "
+                    f"{entry['relationship']} within the column's declared limits and were left unchanged."
+                )
+        frame, trace = _derive(frames[name], table)
         outcome.frame = frame
         outcome.derivation_trace = trace
         frames[name] = frame
@@ -167,6 +223,7 @@ def _run_relational(
         "referential_integrity": referential_integrity(spec, frames),
         "relationship_checks": relationship_checks(spec, frames),
         "cross_table_checks": check_cross_table(spec, frames),
+        "cross_table_repairs": cross_table_repairs,
         "aggregates": aggregate_trace,
         "cardinality": cardinality_report(spec, frames),
     }

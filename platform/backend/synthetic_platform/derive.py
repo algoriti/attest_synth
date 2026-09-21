@@ -88,9 +88,15 @@ def evaluate(expr: Expr, frame: pd.DataFrame) -> pd.Series | object:
     if op == "clip":
         return np.clip(_numeric(args[0]), args[1], args[2])
     if op == "min":
-        return np.minimum.reduce([np.asarray(_numeric(a)) for a in args])
+        result = _numeric(args[0])
+        for value in args[1:]:
+            result = np.minimum(result, _numeric(value))
+        return result
     if op == "max":
-        return np.maximum.reduce([np.asarray(_numeric(a)) for a in args])
+        result = _numeric(args[0])
+        for value in args[1:]:
+            result = np.maximum(result, _numeric(value))
+        return result
 
     # --- comparison ---
     if op == "gt":
@@ -288,3 +294,39 @@ def _cast_to_declared_type(values: pd.Series, column: Column) -> pd.Series:
         return values.astype(bool)
 
     return values
+
+
+def apply_null_rules(frame: pd.DataFrame, table: Table) -> tuple[pd.DataFrame, list[dict]]:
+    """Empty generated values wherever an implies_null rule says they must be empty.
+
+    "A missing submission has no score" was only checked after generation, so every
+    missing submission still carried a score. Only generated columns (rule or learned)
+    are emptied; the check afterwards still reports anything else.
+    """
+    from .evaluate import null_rule_condition
+    from .spec import ConstraintOperator
+
+    result = frame.copy()
+    trace: list[dict] = []
+    for constraint in table.constraints:
+        if constraint.operator != ConstraintOperator.IMPLIES_NULL or len(constraint.columns) != 2:
+            continue
+        target = table.column(constraint.columns[1])
+        if (target is None or target.role not in (SemanticRole.RULE, SemanticRole.LEARNED)
+                or constraint.columns[0] not in result or target.name not in result):
+            continue
+        condition = null_rule_condition(result, constraint)
+        count = int((condition & result[target.name].notna()).sum())
+        if pd.api.types.is_integer_dtype(result[target.name]):
+            result[target.name] = result[target.name].astype("Int64")
+        elif pd.api.types.is_bool_dtype(result[target.name]):
+            result[target.name] = result[target.name].astype("boolean")
+        result.loc[condition, target.name] = None
+        when = f"{constraint.columns[0]} is one of {constraint.values}" if constraint.values else f"{constraint.columns[0]} is true"
+        trace.append({
+            "column": target.name,
+            "depends_on": [constraint.columns[0]],
+            "computed_rows": count,
+            "note": f"emptied where {when}, as the specification requires",
+        })
+    return result, trace

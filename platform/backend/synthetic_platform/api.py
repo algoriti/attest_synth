@@ -148,6 +148,11 @@ class AssistantRequest(BaseModel):
     prompt: str = Field(min_length=10, max_length=4000)
 
 
+class AssistantRevisionRequest(BaseModel):
+    prompt: str = Field(min_length=10, max_length=4000)
+    spec: dict
+
+
 @app.get("/api/assistant/config")
 def assistant_config():
     from .assistant import configuration
@@ -161,6 +166,17 @@ def assistant_proposal(request: AssistantRequest):
         return propose(request.prompt)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
+
+
+@app.post("/api/assistant/revise-upload")
+def assistant_revision(request: AssistantRevisionRequest):
+    """Revise an uploaded-data design from schema metadata; never load its records."""
+    from .assistant import revise_uploaded_spec
+    try:
+        spec=SyntheticDataSpec.model_validate(request.spec)
+        return revise_uploaded_spec(request.prompt,spec)
+    except ValueError as exc:
+        raise HTTPException(422,str(exc)) from exc
 
 
 # --- upload and profiling --------------------------------------------------------

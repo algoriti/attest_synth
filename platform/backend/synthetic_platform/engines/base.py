@@ -112,6 +112,8 @@ def choose_engine(spec: SyntheticDataSpec) -> str:
 # computed afterwards, constants and empties carry no information to model.
 GENERATOR_EXCLUDED_ROLES = {
     SemanticRole.IDENTIFIER,
+    SemanticRole.FOREIGN_KEY,
+    SemanticRole.RULE,
     SemanticRole.DERIVED,
     SemanticRole.CONSTANT,
     SemanticRole.EMPTY,

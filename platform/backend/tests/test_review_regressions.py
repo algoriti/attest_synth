@@ -8,7 +8,7 @@ from synthetic_platform.spec import SyntheticDataSpec, Expr, SemanticRole, Table
 from synthetic_platform.pipeline import run, PipelineError
 from synthetic_platform.validator import validate
 from synthetic_platform.engines.base import get_engine, apply_identifiers_and_constants
-from synthetic_platform.derive import DerivationError, apply_derived
+from synthetic_platform.derive import DerivationError, apply_derived, evaluate
 from synthetic_platform.suggest import suggest_for_table, apply_suggestions, prepare_source
 
 
@@ -309,6 +309,112 @@ def test_hosted_assistant_reconciles_relationship_owned_keys_without_second_call
     assert foreign_key['role']=='foreign_key' and foreign_key['rule'] is None
     assert len(calls)==1
     assert result['review']['automatic_reconciliations']
+
+
+def test_upload_revision_sends_schema_only_and_returns_reviewable_column(monkeypatch):
+    from synthetic_platform import assistant
+    from io import BytesIO
+    monkeypatch.setenv('SYNTHETIC_LLM_API_KEY','test-only')
+    spec=SyntheticDataSpec.model_validate({
+        'name':'private_students','mode':'learned_table','purpose':'analytics','engine':'independent',
+        'tables':[{'name':'students','rows':20,'source':{'kind':'uploaded_csv','row_count':20,'sha256':'secret-hash'},'columns':[
+            {'name':'age','type':'integer','role':'learned','nullable':False},
+            {'name':'private_note','type':'string','role':'learned','nullable':True},
+        ]}],
+    })
+    plan={'changes':[{'action':'add_column','table':'students','column':{
+        'name':'age_band','type':'category','role':'derived','formula':{'op':'if_else','args':[{'op':'lt','args':[{'col':'age'},{'const':21}]},{'const':'under_21'},{'const':'21_plus'}]}
+    }}],'assumptions':['The age bands are user-reviewable demonstration categories.']}
+    seen={}
+    def fake_open(request,timeout):
+        seen.update(json.loads(request.data));return BytesIO(json.dumps({'choices':[{'message':{'content':json.dumps(plan)}}]}).encode())
+    monkeypatch.setattr(assistant.urllib.request,'urlopen',fake_open)
+    result=assistant.revise_uploaded_spec('Add an age band based on the existing age column.',spec)
+    sent=json.dumps(seen)
+    assert 'secret-hash' not in sent and 'row_count' not in sent and 'upload_id' not in sent
+    assert 'age' in sent and 'private_note' in sent
+    table=result['spec']['tables'][0]
+    assert table['source']['kind']=='uploaded_csv'
+    added=next(column for column in table['columns'] if column['name']=='age_band')
+    assert added['role']=='derived' and added['provenance']['origin']=='assistant_proposed'
+    assert 'record values' in result['disclosure']['excluded']
+
+
+def test_upload_revision_omits_independent_performance_field_when_relation_requested(monkeypatch):
+    from synthetic_platform import assistant
+    from io import BytesIO
+    monkeypatch.setenv('SYNTHETIC_LLM_API_KEY','test-only')
+    spec=SyntheticDataSpec.model_validate({
+        'name':'attendance','mode':'learned_table','purpose':'analytics','engine':'independent',
+        'tables':[{'name':'attendance','rows':20,'source':{'kind':'uploaded_csv'},'columns':[
+            {'name':'late_status','type':'boolean','role':'learned'},
+        ]}],
+    })
+    plan={'changes':[{'action':'add_column','table':'attendance','column':{
+        'name':'quality_score','type':'number','role':'rule','rule':{'kind':'number_range','start':0,'end':100}
+    }}],'assumptions':[]}
+    monkeypatch.setattr(assistant.urllib.request,'urlopen',lambda request,timeout:BytesIO(json.dumps({'choices':[{'message':{'content':json.dumps(plan)}}]}).encode()))
+    result=assistant.revise_uploaded_spec('Add a quality score highly related to attendance.',spec)
+    assert not any(c['name']=='quality_score' for c in result['spec']['tables'][0]['columns'])
+    assert any('Omitted independently sampled' in a for a in result['assumptions'])
+
+
+def test_learned_pipeline_merges_locally_generated_rule_columns():
+    source=pd.DataFrame({'age':np.tile(np.arange(17,27),12)})
+    spec=SyntheticDataSpec.model_validate({
+        'name':'hybrid','mode':'learned_table','purpose':'software_testing','engine':'independent',
+        'tables':[{'name':'students','rows':30,'source':{'kind':'uploaded_csv'},'columns':[
+            {'name':'age','type':'integer','role':'learned'},
+            {'name':'review_status','type':'category','role':'rule','rule':{'kind':'choice','values':['pending','reviewed']}},
+        ]}],
+    })
+    result=run(spec,sources={'students':source})
+    assert set(result['frames']['students'].review_status)<= {'pending','reviewed'}
+    assert len(result['frames']['students'])==30
+    assert any('generated locally' in warning for warning in result['report']['tables'][0]['warnings'])
+
+
+def test_validator_rejects_formula_output_type_mismatch():
+    s=simple([
+        dict(name='event_time',type='timestamp',role='rule',rule={'kind':'timestamp_range','start':'2026-01-01','end':'2026-01-02'}),
+        dict(name='time_label',type='string',role='derived',formula={'op':'time_of_day','args':[{'col':'event_time'}]}),
+    ])
+    result=validate(s,get_engine('rules').capabilities())
+    assert any(f.code=='formula_result_type' for f in result.errors)
+
+
+def test_validator_rejects_required_formula_over_nullable_input():
+    s=simple([
+        dict(name='hours',type='number',role='rule',nullable=True,null_fraction=.1,rule={'kind':'number_range','start':0,'end':10}),
+        dict(name='overtime',type='boolean',role='derived',formula={'op':'gt','args':[{'col':'hours'},{'const':8}]}),
+    ])
+    result=validate(s,get_engine('rules').capabilities())
+    assert any(f.code=='formula_nullable_input' for f in result.errors)
+
+
+def test_min_max_expressions_mix_series_and_scalar():
+    frame=pd.DataFrame({'hours':[-2,3,12]})
+    low=evaluate(Expr.model_validate({'op':'max','args':[{'col':'hours'},{'const':0}]}),frame)
+    capped=evaluate(Expr.model_validate({'op':'min','args':[{'col':'hours'},{'const':8}]}),frame)
+    assert list(low)==[0,3,12]
+    assert list(capped)==[-2,3,8]
+
+
+def test_duration_argument_order_reconciles_clear_clock_out_clock_in_reversal():
+    from synthetic_platform.assistant import _normalize_duration_argument_order
+    formula={'op':'duration_hours','args':[{'col':'attendance_time_out'},{'col':'attendance_time_in'}]}
+    assert _normalize_duration_argument_order(formula)==1
+    assert [arg['col'] for arg in formula['args']]==['attendance_time_in','attendance_time_out']
+
+
+def test_validator_rejects_generic_subtraction_of_timestamps():
+    s=simple([
+        dict(name='start',type='timestamp',role='rule',rule={'kind':'timestamp_range','start':'2026-01-01','end':'2026-01-02'}),
+        dict(name='end',type='timestamp',role='rule',rule={'kind':'timestamp_range','start':'2026-01-02','end':'2026-01-03'}),
+        dict(name='hours',type='number',role='derived',formula={'op':'sub','args':[{'col':'end'},{'col':'start'}]}),
+    ])
+    result=validate(s,get_engine('rules').capabilities())
+    assert any(f.code=='formula_result_type' for f in result.errors)
 
 
 def test_completed_job_is_http_serializable(tmp_path,monkeypatch):

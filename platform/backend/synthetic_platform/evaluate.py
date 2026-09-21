@@ -40,6 +40,19 @@ from .spec import ColumnType, Constraint, ConstraintOperator, SemanticRole, Tabl
 # --- constraints ----------------------------------------------------------------
 
 
+def null_rule_condition(frame: pd.DataFrame, constraint: Constraint) -> pd.Series:
+    """Rows where an implies_null rule requires its target to be empty.
+
+    With `values`, the first column matches any listed value ("status is missing").
+    Without them it must be a true boolean flag. The earlier version cast any column
+    to bool, so every non-empty status such as "submitted" counted as true.
+    """
+    source = frame[constraint.columns[0]]
+    if constraint.values:
+        return source.isin(constraint.values).fillna(False).astype(bool)
+    return source.fillna(False).astype(bool)
+
+
 def check_constraints(frame: pd.DataFrame, table: Table) -> list[dict]:
     """Evaluate every declared constraint. These are hard rules, not scores."""
     results: list[dict] = []
@@ -119,10 +132,11 @@ def _check_one(frame: pd.DataFrame, constraint: Constraint) -> tuple[bool, int, 
         return bad == 0, bad, f"[{constraint.minimum}, {constraint.maximum}]"
 
     if op == ConstraintOperator.IMPLIES_NULL:
-        flag = frame[cols[0]].astype(bool)
+        flag = null_rule_condition(frame, constraint)
         target = frame[cols[1]]
         bad = int((flag & target.notna()).sum())
-        return bad == 0, bad, f"when {cols[0]} then {cols[1]} is null"
+        when = f"{cols[0]} in {constraint.values}" if constraint.values else cols[0]
+        return bad == 0, bad, f"when {when} then {cols[1]} is null"
 
     raise ValueError(f"constraint '{op}' is not implemented")
 

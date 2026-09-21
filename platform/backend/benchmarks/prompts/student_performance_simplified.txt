@@ -1,0 +1,15 @@
+Create a synthetic student performance dataset for software testing and analytics development. No real student information.
+
+Tables:
+- students (500 rows): student_id, age (17-30), programme (choose from 5 programmes), year_of_study (1-4), enrollment_status (active, deferred, withdrawn).
+- courses (12 rows): course_id, course_code, course_name (from a fixed list of realistic subject names), credit_units (1-4), course_level (100, 200, 300, 400).
+- assessments: assessment_id, course_id, assessment_type (assignment, quiz, test, midterm examination, final examination), maximum_score (choose from 10, 20, 50, 100), weight_percentage. Leave the assessments row count blank: it is derived from the relationship, where each course has between 4 and 6 assessments (child_count_min 4, child_count_max 6).
+- results: result_id, student_id, assessment_id, score_obtained, submission_status (submitted, late, missing), late_submission_flag. Leave the results row count blank. Link results to students (each student has between 5 and 40 results) and to assessments only; do not link results to any other table.
+
+Rules:
+- score_obtained must be less than or equal to the assessment's maximum_score.
+- late_submission_flag is true exactly when submission_status is late.
+- score_obtained is empty when submission_status is missing.
+- course_code and course_name are unique and paired: list 12 codes and 12 names in the same order.
+- Any pass mark, grade scale or GPA rule is an assistant-proposed assumption, not an institutional fact.
+- Do not add summary or averages tables; those will be calculated afterwards from the generated results.

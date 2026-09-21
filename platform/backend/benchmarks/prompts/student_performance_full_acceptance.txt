@@ -1,0 +1,9 @@
+Create a synthetic student performance dataset for education analytics and machine-learning experimentation. Model student academic performance using attendance, coursework, assignments, quizzes, tests, examinations, participation, continuous assessment, final marks, GPA. Entities: Students, Courses, Student course enrollments, Assessments, Student assessment results, Attendance records, Student performance summaries. About 500 students over one academic year.
+Students: student_id, age, programme, year_of_study, enrollment_status (gender only if needed for a stated purpose).
+Courses: course_id, course_name, course_code, credit_units, course_level.
+Enrollments: enrollment_id, student_id, course_id, academic_year, semester, enrollment_status.
+Assessments: assessment_id, course_id, assessment_type (assignment, quiz, test, practical, continuous assessment, midterm examination, final examination), assessment_date, maximum_score, weight_percentage.
+Results: result_id, student_id, assessment_id, score_obtained, percentage_score, submission_status, late_submission_flag.
+Attendance: attendance_id, student_id, course_id, attendance_date, attendance_status.
+Derived: attendance_rate, assignment_average, quiz_average, test_average, continuous_assessment_score, examination_score, overall_course_score, course_completion_status, pass_or_fail_status, GPA.
+Rules: derived metrics must be calculated from assessment and attendance records, not random. score_obtained must not exceed maximum_score. percentage_score derived from score_obtained and maximum_score. Assessment weights per course add up to 100 unless marked unresolved. overall_course_score from weighted results. Pass/fail thresholds and GPA rules must not be invented; mark as unresolved/assistant-proposed. Attendance must not determine performance unless declared. No causal relationships between attendance, gender, age, programme and results. Valid primary and foreign keys. No real student information.

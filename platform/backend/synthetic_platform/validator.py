@@ -238,6 +238,7 @@ def _validate_column(
     if column.role == SemanticRole.DERIVED:
         assert column.formula is not None
         _validate_expr(column.formula, known, column.name, result, scope)
+        _validate_expression_result_type(table, column, result, scope)
 
     if column.role == SemanticRole.FOREIGN_KEY and not any(
         relationship.child_table == table.name and relationship.child_key == column.name
@@ -329,12 +330,100 @@ def _validate_expr(
         _validate_expr(arg, known, owner, result, scope)
 
 
+def _expression_output_family(expr: Expr, table: Table) -> str | None:
+    """Infer result families only where the expression vocabulary is unambiguous."""
+    if expr.col is not None:
+        column = table.column(expr.col)
+        if column is None:
+            return None
+        if column.type in NUMERIC_TYPES: return "numeric"
+        if column.type in TEMPORAL_TYPES: return "temporal"
+        if column.type == ColumnType.BOOLEAN: return "boolean"
+        if column.type in {ColumnType.STRING, ColumnType.CATEGORY, ColumnType.UUID}: return "text"
+        return None
+    if expr.const is not None:
+        if isinstance(expr.const, bool): return "boolean"
+        if isinstance(expr.const, (int, float)): return "numeric"
+        if isinstance(expr.const, str): return "text"
+        return None
+    if expr.op in {"gt", "ge", "lt", "le", "eq", "ne", "and", "or", "not", "is_null", "not_null"}:
+        return "boolean"
+    if expr.op in {"duration_hours", "duration_seconds", "time_of_day", "day_of_week"}:
+        return "numeric"
+    if expr.op in {"add", "sub", "mul", "div", "round", "floor", "ceil", "abs", "clip", "min", "max"}:
+        families={_expression_output_family(arg,table) for arg in expr.args}
+        return "numeric" if families <= {"numeric",None} else "invalid"
+    if expr.op in {"date_of", "add_days", "add_hours", "add_seconds"}:
+        return "temporal"
+    if expr.op in {"if_else", "coalesce"}:
+        values = expr.args[1:] if expr.op == "if_else" else expr.args
+        families = {_expression_output_family(arg, table) for arg in values}
+        families.discard(None)
+        return families.pop() if len(families) == 1 else None
+    return None
+
+
+def _validate_expression_result_type(table: Table, column: Column, result: ValidationResult, scope: str) -> None:
+    actual = _expression_output_family(column.formula, table)
+    expected = (
+        "numeric" if column.type in NUMERIC_TYPES else
+        "temporal" if column.type in TEMPORAL_TYPES else
+        "boolean" if column.type == ColumnType.BOOLEAN else
+        "text" if column.type in {ColumnType.STRING, ColumnType.CATEGORY, ColumnType.UUID} else None
+    )
+    if actual is not None and expected is not None and actual != expected:
+        result.findings.append(Finding(
+            Severity.ERROR, "formula_result_type",
+            f"Formula for '{column.name}' returns {actual} values, but the column is declared as {column.type.value}.",
+            scope,
+        ))
+    if not column.nullable and _expression_may_be_null(column.formula, table):
+        result.findings.append(Finding(
+            Severity.ERROR, "formula_nullable_input",
+            f"Formula for required column '{column.name}' can be missing because one of its inputs is nullable. Mark the column nullable or use a missingness-safe expression.",
+            scope,
+        ))
+
+
+def _expression_may_be_null(expr: Expr, table: Table) -> bool:
+    if expr.col is not None:
+        column=table.column(expr.col)
+        return bool(column and column.nullable)
+    if expr.const is not None:
+        return False
+    if expr.op in {"is_null", "not_null"}:
+        return False
+    if expr.op == "coalesce":
+        return all(_expression_may_be_null(arg, table) for arg in expr.args)
+    if expr.op == "if_else" and len(expr.args) == 3:
+        return _expression_may_be_null(expr.args[1], table) or _expression_may_be_null(expr.args[2], table)
+    return any(_expression_may_be_null(arg, table) for arg in expr.args)
+
+
 def _validate_constraint_types(table: Table, constraint, result: ValidationResult, scope: str) -> None:
     columns = [table.column(n) for n in constraint.columns]
     if any(c is None for c in columns):
         return  # already reported as unknown
 
     op = constraint.operator
+    if op == ConstraintOperator.IMPLIES_NULL and len(columns) == 2:
+        flag, target = columns
+        if not constraint.values and flag.type != ColumnType.BOOLEAN:
+            result.findings.append(Finding(
+                Severity.ERROR, "implies_null_condition",
+                f"'{flag.name}' is not a true/false column, so say which of its values "
+                f"empty '{target.name}' — for example values [\"missing\"].", scope))
+        if not target.nullable:
+            result.findings.append(Finding(
+                Severity.ERROR, "implies_null_target_not_nullable",
+                f"'{target.name}' must be nullable because a rule empties it.", scope))
+    if (op == ConstraintOperator.UNIQUE and len(columns) == 1 and table.rows is not None
+            and columns[0].rule is not None and columns[0].rule.kind.value == "choice"
+            and len(columns[0].rule.values) < table.rows):
+        result.findings.append(Finding(
+            Severity.ERROR, "unique_list_too_short",
+            f"'{columns[0].name}' must be unique but its list has {len(columns[0].rule.values)} "
+            f"values for {table.rows} rows. Add values or reduce the rows.", scope))
     if op in (ConstraintOperator.PRODUCT_EQUALS, ConstraintOperator.SUM_EQUALS):
         for column in columns:
             assert column is not None
