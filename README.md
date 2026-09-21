@@ -16,14 +16,15 @@ cd ../backend && python -m uvicorn synthetic_platform.api:app --port 8770
 # open http://localhost:8770
 ```
 
+Current setup, implemented limits, Groq configuration and verification are documented in [the platform guide](platform/README.md).
+
 ---
 
 ## Why it exists
 
 Real operational data contains business rules that look like ordinary columns.
 
-Profiling a real attendance export, a quarter of its columns turned out to be formulas
-rather than behaviour — an "is late" flag that was really just *clocked in after a
+Profiling a real attendance export identified candidate formulas for a quarter of its columns — an "is late" flag that was really just *clocked in after a
 fixed cutoff*, an overtime figure that was really just *hours past a standard day*.
 
 Hand that to a machine-learning generator and it imitates all three as statistics. The
@@ -39,8 +40,7 @@ Same generator, same data, with and without Attest Synth:
 | Worst-case contradiction rate | **39.47%** | **0.00%** |
 
 The fix is not a better generator. It is not asking the generator to produce those
-columns at all — they are computed afterwards from a declared formula, so they cannot
-disagree with the columns they depend on.
+columns independently — they are computed afterwards from a declared formula, with explicit bounds and final output checks. The inferred attendance cutoffs remain assumptions until the institution confirms them.
 
 ---
 
@@ -55,7 +55,7 @@ disagree with the columns they depend on.
 - **Reports** completeness, every repair by column, which values were computed rather
   than generated, and every assumption nobody has confirmed.
 
-It works on any single-table CSV, and on linked tables. Attendance was the dataset that
+It supports declared tabular types and rule-generated linked tables. Unsupported schemas are rejected; arbitrary CSVs may require preparation. Attendance was the dataset that
 exposed the design; it is not the scope. Measured across banking, chemistry and
 education data with no domain-specific code, synthetic data beat the do-nothing
 baseline in all three and trailed real data in all three — good enough to build and

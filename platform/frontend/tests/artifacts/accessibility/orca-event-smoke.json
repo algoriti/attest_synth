@@ -1,0 +1,11 @@
+{
+  "generatedUtc": "2026-09-21T08:41:14.677Z",
+  "result": "AT-SPI event-path exercise completed",
+  "states": [
+    "start and skip link focused",
+    "design screen entered with keyboard",
+    "recoverable JSON error exposed as alert",
+    "evidence report and download link focused"
+  ],
+  "limitation": "Programmatic focus and Orca debug events do not establish intelligibility to a human screen-reader user."
+}

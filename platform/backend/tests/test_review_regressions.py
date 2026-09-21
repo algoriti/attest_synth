@@ -69,7 +69,44 @@ def test_junction_both_bounds_and_unique_pairs(seed):
 
 def test_infeasible_secondary_one_to_one_rejected():
     s=employee();s.relationships[2].cardinality='one_to_one'
-    with pytest.raises(ValueError,match='Infeasible'):run(s)
+    with pytest.raises(PipelineError) as rejected:
+        run(s)
+    assert any(
+        finding['code'] in {'infeasible_junction_bounds','infeasible_junction_rows'}
+        for finding in rejected.value.findings
+    )
+
+
+def test_infeasible_explicit_child_rows_rejected_during_validation():
+    s=employee();s.tables=[s.table('employees'),s.table('attendance')];s.relationships=s.relationships[:1]
+    s.table('employees').rows=100
+    s.table('attendance').rows=1000
+    s.relationships[0].child_count_min=1;s.relationships[0].child_count_max=5
+    result=validate(s)
+    assert not result.ok
+    finding=next(f for f in result.errors if f.code=='infeasible_child_rows')
+    assert '1,000 rows' in finding.message
+    assert '100..500' in finding.message
+    assert 'leave it blank' in finding.message
+
+
+def test_explicit_child_rows_inside_relationship_bounds_validate_and_generate():
+    s=employee();s.tables=[s.table('employees'),s.table('attendance')];s.relationships=s.relationships[:1]
+    s.table('attendance').rows=125
+    s.relationships[0].child_count_min=1;s.relationships[0].child_count_max=5
+    s.table('attendance').column('employee_id').role=SemanticRole.FOREIGN_KEY
+    s.table('attendance').column('employee_id').rule=None
+    assert validate(s).ok
+    result=run(s)
+    assert len(result['frames']['attendance'])==125
+    assert result['frames']['attendance'].employee_id.isin(result['frames']['employees'].employee_id).all()
+
+
+def test_unowned_foreign_key_rejected():
+    s=simple([dict(name='owner_id',type='integer',role='foreign_key')])
+    result=validate(s)
+    assert not result.ok
+    assert any(f.code=='unowned_foreign_key' for f in result.errors)
 
 
 def test_optional_relationship_explicit_nulls():
@@ -177,9 +214,93 @@ def test_hosted_assistant_never_confirms_model_claims(monkeypatch):
     assert all(c['provenance']['origin']=='assistant_proposed' and not c['provenance']['confirmed'] for t in result['spec']['tables'] for c in t['columns'])
 
 
-def test_hosted_assistant_rejects_bad_json(monkeypatch):
+def test_hosted_assistant_repairs_bad_json_once(monkeypatch):
+    from synthetic_platform import assistant
+    from io import BytesIO
+    monkeypatch.setenv('SYNTHETIC_LLM_API_KEY','test-only')
+    proposal=json.loads((Path(__file__).parents[1]/'specs/retail_orders.json').read_text())
+    responses=iter([
+        b'{"choices":[{"message":{"content":"not JSON"}}]}',
+        json.dumps({'choices':[{'message':{'content':json.dumps(proposal)}}]}).encode(),
+    ])
+    requests=[]
+    def fake_open(request,timeout):
+        requests.append(json.loads(request.data))
+        return BytesIO(next(responses))
+    monkeypatch.setattr(assistant.urllib.request,'urlopen',fake_open)
+    result=assistant.propose('Create a teaching dataset.')
+    assert result['review']['correction_attempted']
+    assert len(requests)==2
+    assert len(requests[1]['messages'])==4
+
+
+def test_hosted_assistant_reports_failure_after_one_bad_json_repair(monkeypatch):
     from synthetic_platform import assistant
     from io import BytesIO
     monkeypatch.setenv('SYNTHETIC_LLM_API_KEY','test-only')
     monkeypatch.setattr(assistant.urllib.request,'urlopen',lambda *a,**kw:BytesIO(b'{"choices":[{"message":{"content":"not JSON"}}]}'))
-    with pytest.raises(ValueError,match='valid platform specification'):assistant.propose('Create a teaching dataset.')
+    with pytest.raises(ValueError,match='after one correction attempt.*Invalid JSON'):
+        assistant.propose('Create a teaching dataset.')
+
+
+def test_hosted_assistant_preserves_explicit_rows_and_omits_fake_period_summary(monkeypatch):
+    from synthetic_platform import assistant
+    from io import BytesIO
+    monkeypatch.setenv('SYNTHETIC_LLM_API_KEY','test-only')
+    proposal={
+        'name':'employee_activity','mode':'relational_rules','purpose':'ml_development','engine':'relational_rules',
+        'tables':[
+            {'name':'employees','rows':100,'primary_key':'employee_id','columns':[
+                {'name':'employee_id','type':'string','role':'identifier'}]},
+            {'name':'attendance','rows':None,'primary_key':'attendance_id','columns':[
+                {'name':'attendance_id','type':'uuid','role':'identifier'},
+                {'name':'employee_id','type':'string','role':'foreign_key'},
+                {'name':'status','type':'category','role':'rule','rule':{'kind':'choice','values':['present','absent']}}]},
+            {'name':'monthly_performance_summaries','rows':100,'primary_key':'summary_id','columns':[
+                {'name':'summary_id','type':'uuid','role':'identifier'},
+                {'name':'employee_id','type':'string','role':'foreign_key'},
+                {'name':'attendance_rate','type':'number','role':'rule','rule':{'kind':'number_range','start':0,'end':1}}]},
+        ],
+        'relationships':[
+            {'parent_table':'employees','parent_key':'employee_id','child_table':'attendance','child_key':'employee_id','child_count_min':1,'child_count_max':5},
+            {'parent_table':'employees','parent_key':'employee_id','child_table':'monthly_performance_summaries','child_key':'employee_id','child_count_min':12,'child_count_max':12},
+        ],
+    }
+    response=json.dumps({'choices':[{'message':{'content':json.dumps(proposal)}}]}).encode()
+    monkeypatch.setattr(assistant.urllib.request,'urlopen',lambda *a,**kw:BytesIO(response))
+    result=assistant.propose(
+        'Create approximately 500 synthetic employees and monthly employee performance '
+        'summaries calculated from the generated activity records.'
+    )
+    spec=result['spec']
+    assert next(t for t in spec['tables'] if t['name']=='employees')['rows']==500
+    assert all(t['name']!='monthly_performance_summaries' for t in spec['tables'])
+    assert result['review']['explicit_row_requirements'][0]['assistant_rows']==100
+    assert result['review']['omitted_tables']==['monthly_performance_summaries']
+    assert result['review']['unsupported_requests']
+
+
+def test_completed_job_is_http_serializable(tmp_path,monkeypatch):
+    from synthetic_platform import api
+    from fastapi.testclient import TestClient
+    monkeypatch.setattr(api,'STORAGE',tmp_path)
+    s=simple([dict(name='id',type='integer',role='identifier'),dict(name='amount',type='integer',role='rule',rule={'kind':'integer_range','start':0,'end':100})],primary_key='id')
+    api.JOBS['httpcheck']={'id':'httpcheck'}
+    api._run_job('httpcheck',s,None,None)
+    try:
+        with TestClient(api.app) as client:
+            response=client.get('/api/jobs/httpcheck')
+            assert response.status_code==200
+            assert response.json()['status']=='completed'
+            assert all(type(c['passed']) is bool for c in response.json()['report']['tables'][0]['constraints'])
+            assert client.get('/api/jobs/httpcheck/download/records').status_code==200
+    finally:api.JOBS.pop('httpcheck',None)
+
+
+def test_validate_returns_complete_ui_specification():
+    from synthetic_platform.api import validate_spec, ValidateRequest
+    response=validate_spec(ValidateRequest(spec=dict(name='minimal',mode='schema_rules',purpose='software_testing',tables=[dict(name='records',columns=[dict(name='id',type='integer',role='identifier')])])))
+    assert response['ok']
+    assert response['spec']['tables'][0]['constraints']==[]
+    assert response['spec']['relationships']==[]
+    assert response['spec']['privacy']['release_claim_permitted'] is False

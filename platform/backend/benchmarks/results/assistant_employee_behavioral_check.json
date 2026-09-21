@@ -1,0 +1,8 @@
+{
+  "model": "openai/gpt-oss-120b",
+  "provider": "Groq",
+  "status": "failed",
+  "seconds": 64.254,
+  "error": "Model provider returned HTTP 400. Provider gateway rejected the request.",
+  "data_sent": "Prompt fixture and specification JSON schema only; no uploaded or private records."
+}

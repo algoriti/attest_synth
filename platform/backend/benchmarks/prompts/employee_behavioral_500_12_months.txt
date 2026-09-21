@@ -1,0 +1,35 @@
+Create a synthetic employee behavioral dataset for AI/ML experimentation and analytics.
+
+The dataset should model employees and their work-related behavior over time, including attendance, project assignments, tasks, reports, workload, deadlines, quality, and performance-related outcomes.
+
+Include the following main entities and relationships:
+
+- Employees
+- Attendance records linked to employees
+- Projects
+- Project assignments linking employees to projects
+- Tasks linked to employee project assignments
+- Reports linked to employee project assignments
+- Monthly employee performance summaries calculated from the generated activity records
+
+For employees, include fields such as employee ID, department, role, grade, employment status, and hire date.
+
+For attendance, include attendance date, time in, time out, lateness status, overtime hours, and attendance status.
+
+For projects and assignments, include project complexity, priority, assigned date, deadline, completion date, assignment status, and contribution percentage.
+
+For tasks, include assigned date, deadline, completion date, complexity, status, quality score, and rework count.
+
+For reports, include required date, due date, submission date, submission status, and quality score.
+
+Create derived employee behavioral indicators such as attendance rate, punctuality rate, average lateness, overtime hours, project completion rate, deadline adherence rate, task completion rate, rework rate, report submission rate, average quality score, and workload index.
+
+Use realistic but completely synthetic assumptions. Do not assume that attendance automatically determines employee performance. Performance-related measures should depend on several factors such as task completion, project delivery, reporting, quality, workload, and attendance.
+
+Maintain valid primary and foreign key relationships between all tables. Dates must also be logically consistent; for example, completion dates cannot occur before assignment dates and report submission dates cannot occur before the report is required.
+
+Generate approximately 500 synthetic employees with activity covering 12 months.
+
+Clearly identify which fields are generated, which are derived, which relationships are assumed, and any assumptions that require user review.
+
+This dataset is intended only for synthetic-data platform testing, ML experimentation, analytics, and software development. It should not contain or infer any real employee information.

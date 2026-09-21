@@ -1,0 +1,209 @@
+{
+  "checks": [
+    "Text, action and status token contrast meets 4.5:1; field borders meet 3:1 in both themes",
+    "Start at 320px: no horizontal page overflow",
+    "Start at 390px: no horizontal page overflow",
+    "Start at 768px: no horizontal page overflow",
+    "Start at 1440px: no horizontal page overflow",
+    "Upload opens the file chooser using keyboard Enter",
+    "Skip link and keyboard creation focus the main content",
+    "Hiding and reopening the editor preserves unapplied changes",
+    "Cancelling navigation keeps the editor draft",
+    "Editor at 320px: no horizontal page overflow",
+    "Editor at 390px: no horizontal page overflow",
+    "Editor at 768px: no horizontal page overflow",
+    "Editor at 1440px: no horizontal page overflow",
+    "Keyboard generation and CSV download complete",
+    "Assumption details expand and collapse with keyboard Enter",
+    "Report at 320px: no horizontal page overflow",
+    "Report at 390px: no horizontal page overflow",
+    "Report at 768px: no horizontal page overflow",
+    "Report at 1440px: no horizontal page overflow"
+  ],
+  "errors": [],
+  "contrast": [
+    {
+      "theme": "light",
+      "pairs": [
+        {
+          "fg": "--text-primary",
+          "bg": "--surface-0",
+          "ratio": 13.76321066945372
+        },
+        {
+          "fg": "--text-primary",
+          "bg": "--surface-1",
+          "ratio": 14.92052235318248
+        },
+        {
+          "fg": "--text-primary",
+          "bg": "--surface-2",
+          "ratio": 13.354197578323543
+        },
+        {
+          "fg": "--text-secondary",
+          "bg": "--surface-0",
+          "ratio": 6.068656627726807
+        },
+        {
+          "fg": "--text-secondary",
+          "bg": "--surface-1",
+          "ratio": 6.578953780657401
+        },
+        {
+          "fg": "--text-secondary",
+          "bg": "--surface-2",
+          "ratio": 5.88830917349339
+        },
+        {
+          "fg": "--text-muted",
+          "bg": "--surface-0",
+          "ratio": 4.668251314597897
+        },
+        {
+          "fg": "--text-muted",
+          "bg": "--surface-1",
+          "ratio": 5.060792119117946
+        },
+        {
+          "fg": "--text-muted",
+          "bg": "--surface-2",
+          "ratio": 4.529520901599577
+        },
+        {
+          "fg": "--accent",
+          "bg": "--surface-0",
+          "ratio": 5.939607639143077
+        },
+        {
+          "fg": "--accent",
+          "bg": "--surface-1",
+          "ratio": 6.439053406750273
+        },
+        {
+          "fg": "--accent",
+          "bg": "--surface-2",
+          "ratio": 5.7630952439664105
+        },
+        {
+          "fg": "--surface-1",
+          "bg": "--accent",
+          "ratio": 6.439053406750273
+        },
+        {
+          "fg": "--good",
+          "bg": "--good-soft",
+          "ratio": 4.718810655773447
+        },
+        {
+          "fg": "--warning",
+          "bg": "--warning-soft",
+          "ratio": 5.527117906368932
+        },
+        {
+          "fg": "--critical",
+          "bg": "--critical-soft",
+          "ratio": 4.727490985193124
+        },
+        {
+          "fg": "--border-strong",
+          "bg": "--surface-1",
+          "ratio": 3.420663563578626,
+          "minimum": 3
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "pairs": [
+        {
+          "fg": "--text-primary",
+          "bg": "--surface-0",
+          "ratio": 17.629616361402817
+        },
+        {
+          "fg": "--text-primary",
+          "bg": "--surface-1",
+          "ratio": 15.870005319350282
+        },
+        {
+          "fg": "--text-primary",
+          "bg": "--surface-2",
+          "ratio": 13.684062782983373
+        },
+        {
+          "fg": "--text-secondary",
+          "bg": "--surface-0",
+          "ratio": 11.257096932966261
+        },
+        {
+          "fg": "--text-secondary",
+          "bg": "--surface-1",
+          "ratio": 10.133526705535232
+        },
+        {
+          "fg": "--text-secondary",
+          "bg": "--surface-2",
+          "ratio": 8.737729626498943
+        },
+        {
+          "fg": "--text-muted",
+          "bg": "--surface-0",
+          "ratio": 8.152653632410244
+        },
+        {
+          "fg": "--text-muted",
+          "bg": "--surface-1",
+          "ratio": 7.338937720529943
+        },
+        {
+          "fg": "--text-muted",
+          "bg": "--surface-2",
+          "ratio": 6.328068737676269
+        },
+        {
+          "fg": "--accent",
+          "bg": "--surface-0",
+          "ratio": 10.139891522290638
+        },
+        {
+          "fg": "--accent",
+          "bg": "--surface-1",
+          "ratio": 9.127829505620767
+        },
+        {
+          "fg": "--accent",
+          "bg": "--surface-2",
+          "ratio": 7.870557666101418
+        },
+        {
+          "fg": "--surface-1",
+          "bg": "--accent",
+          "ratio": 9.127829505620767
+        },
+        {
+          "fg": "--good",
+          "bg": "--good-soft",
+          "ratio": 5.7059039616490805
+        },
+        {
+          "fg": "--warning",
+          "bg": "--warning-soft",
+          "ratio": 6.613971310256407
+        },
+        {
+          "fg": "--critical",
+          "bg": "--critical-soft",
+          "ratio": 4.987245180384098
+        },
+        {
+          "fg": "--border-strong",
+          "bg": "--surface-1",
+          "ratio": 4.742011157502563,
+          "minimum": 3
+        }
+      ]
+    }
+  ],
+  "limits": "Targeted browser checks only. No screen-reader or participant usability study; no claim of full WCAG conformance."
+}

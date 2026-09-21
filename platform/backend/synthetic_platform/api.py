@@ -12,6 +12,7 @@ from __future__ import annotations
 import io
 import re
 import hashlib
+import math
 import json
 import threading
 import traceback
@@ -21,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import numpy as np
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
@@ -29,6 +31,7 @@ from pydantic import BaseModel, Field
 
 from . import __version__
 from .engines import available_engines
+from .engines.relational import RelationalFeasibilityError
 from .pipeline import PipelineError, run
 from .profile import profile_csv
 from .spec import SyntheticDataSpec
@@ -135,6 +138,7 @@ _ROLE_HELP = {
     "derived": "Computed from other columns after generation.",
     "constant": "One value throughout.",
     "empty": "No observed values; emitted as null.",
+    "aggregate": "Summarized from generated child records.",
 }
 
 
@@ -218,7 +222,8 @@ def reprofile(upload_id: str, tz_offset_hours: float = 0.0) -> dict:
     offset is right, so this is a first-class control rather than a setting.
     """
     frame = _load_upload(upload_id)
-    stem = Path(UPLOADS[upload_id]["filename"]).stem.replace(" ", "_")[:40] or "uploaded"
+    stem = re.sub(r"[^A-Za-z0-9_]", "_", Path(UPLOADS[upload_id]["filename"]).stem)[:40] or "uploaded"
+    if not stem[0].isalpha(): stem = "table_" + stem
     table, report = profile_csv(frame, stem, tz_offset_hours=tz_offset_hours)
     return {
         "upload_id": upload_id,
@@ -318,6 +323,7 @@ def validate_spec(request: ValidateRequest) -> dict:
         }
 
     result = validate(spec, capabilities).as_dict()
+    result["spec"] = spec.model_dump(mode="json")
     result["engine"] = engine_name
     result["open_assumptions"] = spec.open_assumptions()
     return result
@@ -353,6 +359,11 @@ def generate(request: GenerateRequest) -> dict:
             "spec_name": spec.name,
             "created_utc": _now(),
             "progress": "queued",
+            # Surfaced so the generating screen can explain *why* it's slow instead
+            # of leaving the person to guess: ARF on tens of thousands of rows
+            # routinely takes minutes, and a bare spinner reads as a hang.
+            "engine": engine_base.choose_engine(spec),
+            "requested_rows": request.rows,
         }
 
     thread = threading.Thread(
@@ -376,10 +387,12 @@ def _run_job(job_id: str, spec: SyntheticDataSpec, rows: int | None, upload_id: 
         if upload_id:
             frame = _load_upload(upload_id)
             sources[spec.primary_table.name] = frame
+            spec.primary_table.source.upload_id = upload_id
 
         note("generating")
         result = run(spec, sources=sources, rows=rows)
 
+        result["report"] = _finite_json(result["report"])
         note("writing artefacts")
         out_dir = STORAGE / job_id
         out_dir.mkdir(exist_ok=True)
@@ -413,6 +426,22 @@ def _run_job(job_id: str, spec: SyntheticDataSpec, rows: int | None, upload_id: 
                     "progress": "rejected",
                     "error": str(exc),
                     "findings": exc.findings,
+                    "finished_utc": _now(),
+                }
+            )
+    except RelationalFeasibilityError as exc:
+        # A declared row count or cardinality range that cannot be satisfied is a
+        # fixable specification problem, not an engine crash — it should read like
+        # one. Without this branch it fell through to the generic handler below and
+        # reached the UI as "the engine failed" with a raw Python traceback for what
+        # is really a rejected-before-generation message that just arrived a little
+        # late, once the engine had already worked out the request was infeasible.
+        with _LOCK:
+            JOBS[job_id].update(
+                {
+                    "status": "rejected",
+                    "progress": "rejected",
+                    "error": str(exc),
                     "finished_utc": _now(),
                 }
             )
@@ -492,8 +521,8 @@ def examples() -> dict:
     found = []
     for path in sorted(directory.glob("*.json")):
         try:
-            payload = json.loads(path.read_text())
-        except json.JSONDecodeError:
+            payload = SyntheticDataSpec.model_validate_json(path.read_text()).model_dump(mode="json")
+        except ValueError:
             continue
         found.append(
             {
@@ -538,3 +567,11 @@ def _preview(frame: pd.DataFrame, rows: int = 20) -> dict:
 _FRONTEND = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 if _FRONTEND.exists():
     app.mount("/", StaticFiles(directory=str(_FRONTEND), html=True), name="frontend")
+
+
+def _finite_json(value):
+    if isinstance(value, np.generic): return _finite_json(value.item())
+    if isinstance(value, float) and not math.isfinite(value): return None
+    if isinstance(value, dict): return {k:_finite_json(v) for k,v in value.items()}
+    if isinstance(value, list): return [_finite_json(v) for v in value]
+    return value

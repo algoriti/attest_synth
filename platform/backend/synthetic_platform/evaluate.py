@@ -189,7 +189,7 @@ def _correlation_error(synthetic: pd.DataFrame, reference: pd.DataFrame, table: 
     b = reference[numeric].apply(pd.to_numeric, errors="coerce").corr(method="spearman").to_numpy()
     idx = np.triu_indices(len(numeric), 1)
     diff = np.abs(a[idx] - b[idx])
-    return float(np.nanmean(diff)) if diff.size else None
+    return float(np.nanmean(diff)) if diff.size and np.isfinite(diff).any() else None
 
 
 def _exact_overlap(synthetic: pd.DataFrame, reference: pd.DataFrame, table: Table) -> float:

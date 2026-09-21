@@ -1,0 +1,15 @@
+{
+  "checks": [
+    "Guided creation, unsaved-state gate, numeric field and generation",
+    "Retail relational generation, report tabs, CSV download",
+    "Invalid JSON shows a recoverable editor error",
+    "Education JSON import and generation",
+    "Timestamp rewrite and ARF generation with a column named value",
+    "Mobile viewport has no page-wide horizontal overflow"
+  ],
+  "errors": [],
+  "size": {
+    "viewport": 390,
+    "width": 390
+  }
+}

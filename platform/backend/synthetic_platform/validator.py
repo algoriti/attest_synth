@@ -239,6 +239,19 @@ def _validate_column(
         assert column.formula is not None
         _validate_expr(column.formula, known, column.name, result, scope)
 
+    if column.role == SemanticRole.FOREIGN_KEY and not any(
+        relationship.child_table == table.name and relationship.child_key == column.name
+        for relationship in spec.relationships
+    ):
+        result.findings.append(
+            Finding(
+                Severity.ERROR,
+                "unowned_foreign_key",
+                f"Foreign-key column '{column.name}' needs a relationship that assigns it.",
+                scope,
+            )
+        )
+
     if column.role == SemanticRole.CONSTANT and column.constant_value is None:
         result.findings.append(
             Finding(Severity.WARNING, "constant_without_value",
@@ -394,6 +407,15 @@ def _validate_relationships(spec: SyntheticDataSpec, result: ValidationResult) -
                 result.findings.append(Finding(Severity.ERROR, "invalid_parent_key", "Use a regenerated identifier declared as the parent's primary key.", scope))
             if fk.role == SemanticRole.DERIVED or fk.name == child.primary_key:
                 result.findings.append(Finding(Severity.ERROR, "invalid_foreign_key", "Foreign keys cannot be derived or also be the child primary key in this engine.", scope))
+            if fk.role == SemanticRole.RULE:
+                result.findings.append(
+                    Finding(
+                        Severity.WARNING,
+                        "relationship_overwrites_rule",
+                        f"'{child.name}.{fk.name}' is assigned by this relationship; its sampling rule is ignored. Mark it as 'foreign_key'.",
+                        scope,
+                    )
+                )
             if pk.type != fk.type:
                 result.findings.append(Finding(Severity.ERROR, "key_type_mismatch", "Parent and child key types must match.", scope))
             if rel.optional and not fk.nullable:
@@ -420,6 +442,7 @@ def _validate_relationships(spec: SyntheticDataSpec, result: ValidationResult) -
             result.findings.append(Finding(Severity.ERROR, "unsupported_relationship_shape", "This engine supports at most two parents per child, with null links only for single-parent tables.", table.name))
         if len({r.child_key for r in incoming}) != len(incoming):
             result.findings.append(Finding(Severity.ERROR, "duplicate_foreign_key", "Each relationship needs a different child key.", table.name))
+        _validate_relationship_row_count(spec, table, incoming, result)
 
     if _has_cycle(spec):
         result.findings.append(
@@ -434,6 +457,95 @@ def _validate_relationships(spec: SyntheticDataSpec, result: ValidationResult) -
                     "Use 'relational_rules'.")
         )
     _ = table_names
+
+
+def _relationship_bounds(relationship, parent_rows: int, *, junction_second: bool = False) -> tuple[int, int]:
+    low = relationship.child_count_min
+    if low is None:
+        low = 0 if relationship.cardinality == "one_to_one" or junction_second else 1
+    high = relationship.child_count_max
+    if high is None:
+        high = 1 if relationship.cardinality == "one_to_one" else (200000 if junction_second else 5)
+    if relationship.cardinality == "one_to_one":
+        high = min(high, 1)
+    return parent_rows * low, parent_rows * high
+
+
+def _validate_relationship_row_count(
+    spec: SyntheticDataSpec,
+    table: Table,
+    incoming: list,
+    result: ValidationResult,
+) -> None:
+    """Reject declared counts that the relational engine cannot possibly allocate."""
+    if not incoming:
+        return
+    parents = [spec.table(relationship.parent_table) for relationship in incoming]
+    if any(parent is None or parent.rows is None for parent in parents):
+        return
+    parent_rows = [int(parent.rows) for parent in parents if parent is not None]
+
+    if len(incoming) == 1:
+        relationship = incoming[0]
+        minimum, maximum = _relationship_bounds(relationship, parent_rows[0])
+        if table.rows is None:
+            return
+        null_rows = round(table.rows * relationship.null_fraction)
+        linked_rows = table.rows - null_rows
+        if minimum <= linked_rows <= maximum:
+            return
+        null_note = f" ({linked_rows:,} linked after {null_rows:,} optional null links)" if null_rows else ""
+        result.findings.append(
+            Finding(
+                Severity.ERROR,
+                "infeasible_child_rows",
+                f"Table '{table.name}' requests {table.rows:,} rows{null_note}, but "
+                f"{relationship.parent_table}->{table.name} allows {minimum:,}..{maximum:,} "
+                f"linked rows with {parent_rows[0]:,} parent rows. Set '{table.name}.rows' "
+                "within that range, leave it blank to derive the count, or change the "
+                "children-per-parent bounds.",
+                f"{relationship.parent_table}->{table.name}",
+            )
+        )
+        return
+
+    if len(incoming) != 2:
+        return
+    first, second = incoming
+    first_min, first_max = _relationship_bounds(first, parent_rows[0])
+    second_min, second_max = _relationship_bounds(second, parent_rows[1], junction_second=True)
+    unique_pair = any(set(key) == {first.child_key, second.child_key} for key in table.unique_keys)
+    if unique_pair:
+        first_max = min(first_max, parent_rows[0] * parent_rows[1])
+        second_max = min(second_max, parent_rows[0] * parent_rows[1])
+    minimum, maximum = max(first_min, second_min), min(first_max, second_max, 200000)
+    if parent_rows[0] * parent_rows[1] > 50000:
+        result.findings.append(
+            Finding(
+                Severity.ERROR,
+                "junction_candidate_limit",
+                f"Table '{table.name}' has {parent_rows[0] * parent_rows[1]:,} possible parent pairs; this PoC supports at most 50,000.",
+                table.name,
+            )
+        )
+    if minimum > maximum:
+        result.findings.append(
+            Finding(
+                Severity.ERROR,
+                "infeasible_junction_bounds",
+                f"Table '{table.name}' has incompatible parent bounds: the required minimum is {minimum:,}, but the maximum is {maximum:,}.",
+                table.name,
+            )
+        )
+    elif table.rows is not None and not minimum <= table.rows <= maximum:
+        result.findings.append(
+            Finding(
+                Severity.ERROR,
+                "infeasible_junction_rows",
+                f"Table '{table.name}' requests {table.rows:,} rows, but its two relationships allow {minimum:,}..{maximum:,}. Leave rows blank to derive the count or change the relationship bounds.",
+                table.name,
+            )
+        )
 
 
 def _has_cycle(spec: SyntheticDataSpec) -> bool:

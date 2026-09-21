@@ -12,7 +12,7 @@ def frame_hash(frame):
 def schema_checks(frame, table):
     checks = []
     def add(kind, columns, bad, detail):
-        checks.append(dict(operator=kind, columns=columns, passed=bad == 0,
+        checks.append(dict(operator=kind, columns=columns, passed=bool(bad == 0),
                            failing_rows=int(bad), detail=detail))
     for c in table.columns:
         if c.name not in frame:

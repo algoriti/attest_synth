@@ -32,7 +32,7 @@ class RuleEngine(EngineAdapter):
         return {
             "name": self.name,
             "label": "Rules + Faker",
-            "description": "Generates structurally valid data from declared rules, with no source records.",
+            "description": "Generates from declared rules without source records; final output is independently checked.",
             "single_table": True,
             "multi_table": False,
             "learns_from_records": False,
@@ -62,7 +62,13 @@ class RuleEngine(EngineAdapter):
 
         data: dict[str, object] = {}
         for column in table.columns:
-            if column.role in (SemanticRole.DERIVED, SemanticRole.CONSTANT, SemanticRole.EMPTY, SemanticRole.AGGREGATE):
+            if column.role in (
+                SemanticRole.DERIVED,
+                SemanticRole.CONSTANT,
+                SemanticRole.EMPTY,
+                SemanticRole.AGGREGATE,
+                SemanticRole.FOREIGN_KEY,
+            ):
                 continue
             if column.role == SemanticRole.IDENTIFIER:
                 continue  # filled by apply_identifiers_and_constants

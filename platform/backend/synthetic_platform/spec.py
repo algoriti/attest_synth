@@ -45,6 +45,7 @@ class SemanticRole(str, Enum):
     """What the platform is allowed to do with a column."""
 
     IDENTIFIER = "identifier"  # regenerate; never learn the original values
+    FOREIGN_KEY = "foreign_key"  # assigned from a declared parent relationship
     LEARNED = "learned"  # a generator may model this
     RULE = "rule"  # sampled from an explicit declared rule
     DERIVED = "derived"  # computed from other columns after generation
@@ -228,6 +229,10 @@ class Column(BaseModel):
             raise ValueError(f"derived column '{self.name}' needs a formula")
         if self.role == SemanticRole.RULE and self.rule is None:
             raise ValueError(f"rule column '{self.name}' needs a rule")
+        if self.role == SemanticRole.FOREIGN_KEY and self.rule is not None:
+            raise ValueError(
+                f"foreign-key column '{self.name}' is relationship-owned and cannot have a rule"
+            )
         if self.minimum is not None and self.maximum is not None:
             if self.minimum > self.maximum:
                 raise ValueError(f"column '{self.name}' has minimum above maximum")

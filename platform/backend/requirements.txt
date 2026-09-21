@@ -10,3 +10,6 @@ scikit-learn==1.8.0
 Faker==40.39.0
 arfpy==0.1.1
 pytest==9.0.2
+
+# HTTP integration tests
+httpx==0.28.1

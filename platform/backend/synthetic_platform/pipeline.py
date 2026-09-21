@@ -77,6 +77,9 @@ def run(
     table = spec.primary_table
     requested = table.rows if table.rows is not None else 100
     source = sources.get(table.name)
+    if source is not None:
+        table.source.sha256 = frame_hash(source)
+        table.source.row_count = len(source)
 
     if spec.mode == Mode.LEARNED_TABLE and source is None:
         raise PipelineError(f"Mode 'learned_table' needs source records for '{table.name}'.")
@@ -114,9 +117,12 @@ def run(
             evaluation["fidelity"] = fidelity(frame, source, table)
         if "predictive_utility" in spec.evaluation.checks and spec.evaluation.target:
             task = spec.evaluation.task or "classification"
-            evaluation["predictive_utility"] = predictive_utility(
-                frame, source, table, spec.evaluation.target, task, spec.seed, heldout=heldout
-            )
+            try:
+                evaluation["predictive_utility"] = predictive_utility(
+                    frame, source, table, spec.evaluation.target, task, spec.seed, heldout=heldout
+                )
+            except (ValueError, TypeError) as exc:
+                evaluation["predictive_utility"] = {"error": str(exc)}
 
     report = build_report(
         spec=spec,
@@ -247,7 +253,7 @@ def build_report(
         if check in ("schema", "constraints"):
             performed[check] = {"status": "passed" if all_constraints_passed else "failed"}
         elif check in evaluation:
-            performed[check] = {"status": "failed" if isinstance(evaluation[check],dict) and evaluation[check].get("error") else "completed"}
+            performed[check] = {"status": "failed" if isinstance(evaluation[check],dict) and (evaluation[check].get("error") or any(isinstance(v,dict) and v.get("error") for v in evaluation[check].values())) else "completed"}
         else:
             performed[check] = {"status": "skipped", "reason": "No applicable reference data or relationship."}
     evaluation["checks"] = performed
@@ -271,7 +277,7 @@ def build_report(
             "python": platform.python_version(),
             "platform": platform.platform(),
             "pandas": pd.__version__,
-            **{p: importlib.metadata.version(p) for p in ("arfpy", "numpy", "scipy", "scikit-learn", "Faker")},
+            **{p: importlib.metadata.version(p) for p in ("arfpy", "numpy", "scipy", "scikit-learn", "Faker", "pydantic")},
             "executable": sys.executable,
         },
         "summary": {

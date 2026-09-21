@@ -1,0 +1,119 @@
+{
+  "model": "openai/gpt-oss-120b",
+  "provider": "Groq",
+  "status": "completed",
+  "seconds": 6.228212583000186,
+  "spec": {
+    "spec_version": "2.0",
+    "name": "products_dataset",
+    "mode": "schema_rules",
+    "purpose": "software_testing",
+    "description": "",
+    "engine": null,
+    "seed": 2026,
+    "tables": [
+      {
+        "name": "products",
+        "rows": 10,
+        "primary_key": "product_id",
+        "unique_keys": [],
+        "columns": [
+          {
+            "name": "product_id",
+            "type": "integer",
+            "role": "identifier",
+            "description": "",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "Hosted assistant proposal; review before relying on it.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "unit_price",
+            "type": "number",
+            "role": "rule",
+            "description": "",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "number_range",
+              "provider": null,
+              "prefix": "",
+              "start": 1,
+              "end": 50,
+              "values": [],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "Hosted assistant proposal; review before relying on it.",
+              "reference": null,
+              "confirmed": false
+            }
+          }
+        ],
+        "constraints": [],
+        "source": {
+          "kind": "none",
+          "reference": null,
+          "upload_id": null,
+          "row_count": null,
+          "sha256": null
+        }
+      }
+    ],
+    "relationships": [],
+    "aggregates": [],
+    "cross_table_constraints": [],
+    "privacy": {
+      "protected_entity": null,
+      "mechanism": "none",
+      "epsilon": null,
+      "release_claim_permitted": false,
+      "notes": ""
+    },
+    "evaluation": {
+      "checks": [
+        "schema",
+        "constraints"
+      ],
+      "target": null,
+      "task": null,
+      "split": "random",
+      "split_column": null,
+      "test_fraction": 0.25
+    }
+  },
+  "summary": {
+    "tables": 1,
+    "total_rows": 10,
+    "all_constraints_passed": true,
+    "incomplete_tables": [],
+    "open_assumptions": 2,
+    "elapsed_seconds": 0.0342
+  },
+  "data_sent": "User scenario and specification JSON schema only; no uploaded records."
+}

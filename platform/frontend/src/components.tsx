@@ -43,7 +43,7 @@ export function Notice({
 }) {
   const icon = { good: "✓", warning: "!", critical: "×", accent: "i", neutral: "i" }[tone];
   return (
-    <div className="notice" data-tone={tone}>
+    <div className="notice" data-tone={tone} role={tone === "critical" ? "alert" : undefined}>
       <span className="notice-icon" aria-hidden="true">
         {icon}
       </span>
@@ -59,19 +59,23 @@ export function Card({
   title,
   sub,
   actions,
+  className = "",
+  id,
   children,
 }: {
   title?: string;
   sub?: ReactNode;
   actions?: ReactNode;
+  className?: string;
+  id?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="card">
+    <section className={`card ${className}`} id={id}>
       {title ? (
         <header className="card-head">
-          <h3>{title}</h3>
-          {sub ? <span className="sub">{sub}</span> : null}
+          <div className="card-heading"><h2>{title}</h2>
+          {sub ? <div className="sub">{sub}</div> : null}</div>
           <span className="spacer" />
           {actions}
         </header>
@@ -110,8 +114,8 @@ export function DataPreview({ preview, limit = 8 }: { preview: Preview; limit?: 
   const rows = preview.rows.slice(0, limit);
   return (
     <>
-      <div className="table-wrap">
-        <table>
+      <div className="table-wrap" tabIndex={0} role="region" aria-label="Data preview; scroll horizontally for more columns">
+        <table aria-label="Dataset preview">
           <thead>
             <tr>
               {preview.columns.map((column) => (

@@ -17,6 +17,7 @@ export interface ValidationResult {
   warning_count: number;
   findings: Finding[];
   engine?: string;
+  spec?: Spec;
   open_assumptions?: { scope: string; origin: string; detail: string }[];
 }
 
@@ -112,6 +113,19 @@ export interface Spec {
   evaluation: { checks: string[]; target?: string | null; task?: string | null; split?: string; split_column?: string | null };
 }
 
+export interface AssistantReview {
+  correction_attempted: boolean;
+  explicit_row_requirements: {
+    table: string;
+    requested_rows: number;
+    qualifier: string;
+    assistant_rows: number | null;
+    changed: boolean;
+  }[];
+  unsupported_requests: string[];
+  omitted_tables: string[];
+}
+
 export interface Relationship {
   parent_table: string;
   parent_key: string;
@@ -200,6 +214,8 @@ export interface EvidenceReport {
   tables: TableReport[];
   evaluation: {
     checks?: Record<string, {status: string; reason?: string}>;
+    cross_table_checks?: {relationship: string; passed: boolean; failing_rows: number; skipped_rows: number}[];
+    aggregates?: {table:string;column:string;operation:string;source:string;denominator:string}[];
     relationship_checks?: {relationship: string; passed: boolean; invalid_keys: number; parents_outside_bounds: number}[];
     split?: {strategy: string; train_rows: number; test_rows: number; note: string};
     fidelity?: {
@@ -249,6 +265,8 @@ export interface Job {
   spec_name: string;
   created_utc: string;
   progress: string;
+  engine?: string;
+  requested_rows?: number | null;
   error?: string;
   findings?: Finding[];
   traceback?: string;
@@ -273,7 +291,7 @@ async function json<T>(response: Response): Promise<T> {
 
 export const api = {
   assistantConfig: () => fetch(`${BASE}/api/assistant/config`).then(json<{configured:boolean;model:string;data_policy:string}>),
-  propose: (prompt:string) => fetch(`${BASE}/api/assistant`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})}).then(json<{spec:Spec;notice:string}>),
+  propose: (prompt:string) => fetch(`${BASE}/api/assistant`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})}).then(json<{spec:Spec;notice:string;review:AssistantReview}>),
   health: () => fetch(`${BASE}/api/health`).then(json<{ status: string; version: string }>),
 
   engines: () => fetch(`${BASE}/api/engines`).then(json<{ engines: Engine[] }>),

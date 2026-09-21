@@ -1,0 +1,1422 @@
+{
+  "generatedUtc": "2026-09-21T08:44:37.608Z",
+  "tool": "axe-core 4.10.3 and Chrome accessibility tree",
+  "scope": [
+    "Start screen",
+    "Guided editor",
+    "Recoverable JSON error",
+    "Single-table evidence report",
+    "Relational guided editor",
+    "Relational evidence report with details expanded",
+    "Uploaded-data review with suggested fix"
+  ],
+  "summary": {
+    "screens": 7,
+    "violations": 0,
+    "incompleteChecksRequiringReview": 7
+  },
+  "limitations": [
+    "Automated rules and an accessibility tree cannot judge announcement quality or task comprehension.",
+    "A human must complete the companion Orca protocol before claiming a completed screen-reader audit.",
+    "No claim of WCAG conformance is made."
+  ],
+  "audits": [
+    {
+      "name": "Start screen",
+      "url": "http://127.0.0.1:8772/",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.10/color-contrast?application=axeAPI",
+          "targets": [
+            [
+              ".ghost > span[aria-hidden=\"true\"]"
+            ],
+            [
+              ".upload-symbol"
+            ],
+            [
+              "#scenario"
+            ]
+          ]
+        }
+      ],
+      "passCount": 36,
+      "accessibilityTree": [
+        {
+          "role": "link",
+          "name": "Skip to main content"
+        },
+        {
+          "role": "main",
+          "name": ""
+        },
+        {
+          "role": "navigation",
+          "name": "Dataset workflow"
+        },
+        {
+          "role": "button",
+          "name": "Switch to dark theme"
+        },
+        {
+          "role": "heading",
+          "name": "Create a dataset"
+        },
+        {
+          "role": "region",
+          "name": "Explore a template"
+        },
+        {
+          "role": "button",
+          "name": "Step 1: Start"
+        },
+        {
+          "role": "button",
+          "name": "Step 2: Design"
+        },
+        {
+          "role": "button",
+          "name": "Step 3: Generate"
+        },
+        {
+          "role": "button",
+          "name": "Step 4: Evidence"
+        },
+        {
+          "role": "button",
+          "name": "Create your own dataset"
+        },
+        {
+          "role": "button",
+          "name": "Upload a CSV or TSV"
+        },
+        {
+          "role": "heading",
+          "name": "Explore a template"
+        },
+        {
+          "role": "button",
+          "name": "LINKED TABLES Students & courses Students, courses and unique enrolments with course capacity and student enrolment counts. 3 tables · 9 columns"
+        },
+        {
+          "role": "button",
+          "name": "LINKED TABLES People & attendance Example employee, attendance and project tables with checked keys and explicitly assumed behaviour. 4 tables · 15 columns"
+        },
+        {
+          "role": "button",
+          "name": "SINGLE TABLE Retail orders Test orders with a total that always matches quantity times unit price. 1 table · 6 columns"
+        },
+        {
+          "role": "button",
+          "name": "LINKED TABLES Customers & purchases Customers, products and order lines, with unique customer/product pairs and totals summarized from line items. 3 tables · 11 columns"
+        },
+        {
+          "role": "button",
+          "name": "SINGLE TABLE Sensor readings Temperature readings following an explicitly invented AR(1) process. 1 table · 4 columns"
+        },
+        {
+          "role": "button",
+          "name": "Propose a dataset"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "Under the hood Explore generation engines and their limits"
+        },
+        {
+          "role": "heading",
+          "name": "Start with your design"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "Already have a specification?"
+        },
+        {
+          "role": "heading",
+          "name": "Learn from existing data"
+        },
+        {
+          "role": "heading",
+          "name": "Turn an idea into a starting design"
+        },
+        {
+          "role": "textbox",
+          "name": "Your scenario"
+        }
+      ]
+    },
+    {
+      "name": "Guided editor",
+      "url": "http://127.0.0.1:8772/",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.10/color-contrast?application=axeAPI",
+          "targets": [
+            [
+              "button[data-done=\"true\"] > .step-num"
+            ],
+            [
+              ".theme-toggle > span[aria-hidden=\"true\"]"
+            ],
+            [
+              ".button-link > span[aria-hidden=\"true\"]"
+            ]
+          ]
+        }
+      ],
+      "passCount": 44,
+      "accessibilityTree": [
+        {
+          "role": "link",
+          "name": "Skip to main content"
+        },
+        {
+          "role": "main",
+          "name": ""
+        },
+        {
+          "role": "navigation",
+          "name": "Dataset workflow"
+        },
+        {
+          "role": "button",
+          "name": "Switch to dark theme"
+        },
+        {
+          "role": "heading",
+          "name": "Review your dataset"
+        },
+        {
+          "role": "button",
+          "name": "Hide dataset editor"
+        },
+        {
+          "role": "link",
+          "name": "Go to generation settings"
+        },
+        {
+          "role": "button",
+          "name": "Step 1: Start"
+        },
+        {
+          "role": "button",
+          "name": "Step 2: Design"
+        },
+        {
+          "role": "button",
+          "name": "Step 3: Generate"
+        },
+        {
+          "role": "button",
+          "name": "Step 4: Evidence"
+        },
+        {
+          "role": "table",
+          "name": ""
+        },
+        {
+          "role": "button",
+          "name": "Generate dataset"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "View the raw specification"
+        },
+        {
+          "role": "button",
+          "name": "Add another table"
+        },
+        {
+          "role": "button",
+          "name": "Apply and validate changes"
+        },
+        {
+          "role": "heading",
+          "name": "records"
+        },
+        {
+          "role": "heading",
+          "name": "Generation settings"
+        },
+        {
+          "role": "heading",
+          "name": "Design your dataset"
+        },
+        {
+          "role": "button",
+          "name": "Guided editor"
+        },
+        {
+          "role": "button",
+          "name": "Advanced JSON"
+        },
+        {
+          "role": "button",
+          "name": "Export specification"
+        },
+        {
+          "role": "textbox",
+          "name": "Dataset name"
+        },
+        {
+          "role": "combobox",
+          "name": "What will you use it for?"
+        },
+        {
+          "role": "textbox",
+          "name": "Protected entity (if learning)"
+        },
+        {
+          "role": "button",
+          "name": "Add column to records"
+        },
+        {
+          "role": "combobox",
+          "name": "ENGINE"
+        },
+        {
+          "role": "textbox",
+          "name": "Table name"
+        },
+        {
+          "role": "combobox",
+          "name": "Unique record identifier"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "› COLUMN 1 id integer · unique ID"
+        }
+      ]
+    },
+    {
+      "name": "Recoverable JSON error",
+      "url": "http://127.0.0.1:8772/",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.10/color-contrast?application=axeAPI",
+          "targets": [
+            [
+              "button[data-done=\"true\"] > .step-num"
+            ],
+            [
+              ".ghost > span[aria-hidden=\"true\"]"
+            ],
+            [
+              ".button-link > span[aria-hidden=\"true\"]"
+            ],
+            [
+              "textarea"
+            ]
+          ]
+        }
+      ],
+      "passCount": 44,
+      "accessibilityTree": [
+        {
+          "role": "link",
+          "name": "Skip to main content"
+        },
+        {
+          "role": "main",
+          "name": ""
+        },
+        {
+          "role": "navigation",
+          "name": "Dataset workflow"
+        },
+        {
+          "role": "button",
+          "name": "Switch to dark theme"
+        },
+        {
+          "role": "heading",
+          "name": "Review your dataset"
+        },
+        {
+          "role": "button",
+          "name": "Hide dataset editor"
+        },
+        {
+          "role": "link",
+          "name": "Go to generation settings"
+        },
+        {
+          "role": "button",
+          "name": "Step 1: Start"
+        },
+        {
+          "role": "button",
+          "name": "Step 2: Design"
+        },
+        {
+          "role": "button",
+          "name": "Step 3: Generate"
+        },
+        {
+          "role": "button",
+          "name": "Step 4: Evidence"
+        },
+        {
+          "role": "table",
+          "name": ""
+        },
+        {
+          "role": "button",
+          "name": "Generate dataset"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "View the raw specification"
+        },
+        {
+          "role": "alert",
+          "name": ""
+        },
+        {
+          "role": "button",
+          "name": "Apply and validate changes"
+        },
+        {
+          "role": "status",
+          "name": ""
+        },
+        {
+          "role": "button",
+          "name": "Discard edits"
+        },
+        {
+          "role": "heading",
+          "name": "records"
+        },
+        {
+          "role": "heading",
+          "name": "Generation settings"
+        },
+        {
+          "role": "heading",
+          "name": "Design your dataset"
+        },
+        {
+          "role": "button",
+          "name": "Guided editor"
+        },
+        {
+          "role": "button",
+          "name": "Advanced JSON"
+        },
+        {
+          "role": "button",
+          "name": "Export specification"
+        },
+        {
+          "role": "textbox",
+          "name": "Specification JSON"
+        },
+        {
+          "role": "combobox",
+          "name": "ENGINE"
+        }
+      ]
+    },
+    {
+      "name": "Single-table evidence report",
+      "url": "http://127.0.0.1:8772/",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.10/color-contrast?application=axeAPI",
+          "targets": [
+            [
+              "button[aria-label=\"Step 1: Start\"] > .step-num"
+            ],
+            [
+              "button[aria-label=\"Step 2: Design\"] > .step-num"
+            ],
+            [
+              ".theme-toggle > span[aria-hidden=\"true\"]"
+            ],
+            [
+              ".primary > span[aria-hidden=\"true\"]"
+            ]
+          ]
+        }
+      ],
+      "passCount": 39,
+      "accessibilityTree": [
+        {
+          "role": "link",
+          "name": "Skip to main content"
+        },
+        {
+          "role": "main",
+          "name": ""
+        },
+        {
+          "role": "navigation",
+          "name": "Dataset workflow"
+        },
+        {
+          "role": "button",
+          "name": "Switch to dark theme"
+        },
+        {
+          "role": "heading",
+          "name": "Evidence report"
+        },
+        {
+          "role": "navigation",
+          "name": "Result tables"
+        },
+        {
+          "role": "status",
+          "name": ""
+        },
+        {
+          "role": "button",
+          "name": "Step 1: Start"
+        },
+        {
+          "role": "button",
+          "name": "Step 2: Design"
+        },
+        {
+          "role": "button",
+          "name": "Step 3: Generate"
+        },
+        {
+          "role": "button",
+          "name": "Step 4: Evidence"
+        },
+        {
+          "role": "button",
+          "name": "records (100)"
+        },
+        {
+          "role": "button",
+          "name": "Show all tables"
+        },
+        {
+          "role": "heading",
+          "name": "Declared constraints"
+        },
+        {
+          "role": "heading",
+          "name": "Repairs applied after generation"
+        },
+        {
+          "role": "heading",
+          "name": "Preview"
+        },
+        {
+          "role": "region",
+          "name": "Data preview; scroll horizontally for more columns"
+        },
+        {
+          "role": "link",
+          "name": "Download full report (JSON)"
+        },
+        {
+          "role": "link",
+          "name": "Download specification (JSON)"
+        },
+        {
+          "role": "button",
+          "name": "Start another dataset"
+        },
+        {
+          "role": "heading",
+          "name": "Privacy"
+        },
+        {
+          "role": "heading",
+          "name": "Checks and results"
+        },
+        {
+          "role": "heading",
+          "name": "records"
+        },
+        {
+          "role": "link",
+          "name": "Download CSV"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "Review 3 checks · all passed"
+        },
+        {
+          "role": "table",
+          "name": "Dataset preview"
+        },
+        {
+          "role": "heading",
+          "name": "Reproduction"
+        }
+      ]
+    },
+    {
+      "name": "Relational guided editor",
+      "url": "http://127.0.0.1:8772/",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.10/color-contrast?application=axeAPI",
+          "targets": [
+            [
+              "button[data-done=\"true\"] > .step-num"
+            ],
+            [
+              ".theme-toggle > span[aria-hidden=\"true\"]"
+            ],
+            [
+              ".button-link > span[aria-hidden=\"true\"]"
+            ]
+          ]
+        }
+      ],
+      "passCount": 44,
+      "accessibilityTree": [
+        {
+          "role": "link",
+          "name": "Skip to main content"
+        },
+        {
+          "role": "main",
+          "name": ""
+        },
+        {
+          "role": "navigation",
+          "name": "Dataset workflow"
+        },
+        {
+          "role": "button",
+          "name": "Switch to dark theme"
+        },
+        {
+          "role": "heading",
+          "name": "Review your dataset"
+        },
+        {
+          "role": "button",
+          "name": "Hide dataset editor"
+        },
+        {
+          "role": "link",
+          "name": "Go to generation settings"
+        },
+        {
+          "role": "button",
+          "name": "Step 1: Start"
+        },
+        {
+          "role": "button",
+          "name": "Step 2: Design"
+        },
+        {
+          "role": "button",
+          "name": "Step 3: Generate"
+        },
+        {
+          "role": "button",
+          "name": "Step 4: Evidence"
+        },
+        {
+          "role": "table",
+          "name": ""
+        },
+        {
+          "role": "table",
+          "name": ""
+        },
+        {
+          "role": "table",
+          "name": ""
+        },
+        {
+          "role": "table",
+          "name": ""
+        },
+        {
+          "role": "button",
+          "name": "Generate dataset"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "View the raw specification"
+        },
+        {
+          "role": "button",
+          "name": "Add another table"
+        },
+        {
+          "role": "button",
+          "name": "Apply and validate changes"
+        },
+        {
+          "role": "heading",
+          "name": "customers"
+        },
+        {
+          "role": "heading",
+          "name": "products"
+        },
+        {
+          "role": "heading",
+          "name": "order_lines"
+        },
+        {
+          "role": "heading",
+          "name": "Relationships"
+        },
+        {
+          "role": "heading",
+          "name": "Generation settings"
+        },
+        {
+          "role": "heading",
+          "name": "Design your dataset"
+        },
+        {
+          "role": "button",
+          "name": "Guided editor"
+        },
+        {
+          "role": "button",
+          "name": "Advanced JSON"
+        },
+        {
+          "role": "button",
+          "name": "Export specification"
+        },
+        {
+          "role": "textbox",
+          "name": "Dataset name"
+        },
+        {
+          "role": "combobox",
+          "name": "What will you use it for?"
+        },
+        {
+          "role": "textbox",
+          "name": "Protected entity (if learning)"
+        },
+        {
+          "role": "button",
+          "name": "Add column to customers"
+        },
+        {
+          "role": "button",
+          "name": "Remove table"
+        },
+        {
+          "role": "button",
+          "name": "Add column to products"
+        },
+        {
+          "role": "button",
+          "name": "Remove table"
+        },
+        {
+          "role": "button",
+          "name": "Add column to order_lines"
+        },
+        {
+          "role": "button",
+          "name": "Remove table"
+        },
+        {
+          "role": "checkbox",
+          "name": "Allow a child without a parent"
+        },
+        {
+          "role": "button",
+          "name": "Remove link"
+        },
+        {
+          "role": "checkbox",
+          "name": "Allow a child without a parent"
+        },
+        {
+          "role": "button",
+          "name": "Remove link"
+        },
+        {
+          "role": "button",
+          "name": "Add relationship"
+        },
+        {
+          "role": "checkbox",
+          "name": "Each parent pair appears once in order_lines"
+        },
+        {
+          "role": "combobox",
+          "name": "ENGINE"
+        },
+        {
+          "role": "textbox",
+          "name": "Table name"
+        },
+        {
+          "role": "combobox",
+          "name": "Unique record identifier"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "› COLUMN 1 customer_id integer · unique ID"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "› COLUMN 2 segment category · rule"
+        },
+        {
+          "role": "checkbox",
+          "name": "Allow missing values"
+        },
+        {
+          "role": "button",
+          "name": "Remove segment"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "› COLUMN 3 total_spend number · aggregate"
+        },
+        {
+          "role": "checkbox",
+          "name": "Allow missing values"
+        },
+        {
+          "role": "button",
+          "name": "Remove total_spend"
+        },
+        {
+          "role": "textbox",
+          "name": "Table name"
+        },
+        {
+          "role": "combobox",
+          "name": "Unique record identifier"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "› COLUMN 1 product_id integer · unique ID"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "› COLUMN 2 category category · rule"
+        },
+        {
+          "role": "checkbox",
+          "name": "Allow missing values"
+        },
+        {
+          "role": "button",
+          "name": "Remove category"
+        },
+        {
+          "role": "textbox",
+          "name": "Table name"
+        },
+        {
+          "role": "combobox",
+          "name": "Unique record identifier"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "› COLUMN 1 line_id integer · unique ID"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "› COLUMN 2 customer_id integer · rule"
+        },
+        {
+          "role": "checkbox",
+          "name": "Allow missing values"
+        },
+        {
+          "role": "button",
+          "name": "Remove customer_id"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "› COLUMN 3 product_id integer · rule"
+        },
+        {
+          "role": "checkbox",
+          "name": "Allow missing values"
+        },
+        {
+          "role": "button",
+          "name": "Remove product_id"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "› COLUMN 4 quantity integer · rule"
+        },
+        {
+          "role": "checkbox",
+          "name": "Allow missing values"
+        },
+        {
+          "role": "button",
+          "name": "Remove quantity"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "› COLUMN 5 unit_price number · rule"
+        },
+        {
+          "role": "checkbox",
+          "name": "Allow missing values"
+        },
+        {
+          "role": "button",
+          "name": "Remove unit_price"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "› COLUMN 6 line_total number · derived"
+        },
+        {
+          "role": "button",
+          "name": "Use this formula"
+        },
+        {
+          "role": "checkbox",
+          "name": "Allow missing values"
+        },
+        {
+          "role": "button",
+          "name": "Remove line_total"
+        },
+        {
+          "role": "combobox",
+          "name": "Parent table"
+        },
+        {
+          "role": "combobox",
+          "name": "Child table"
+        },
+        {
+          "role": "combobox",
+          "name": "Child link column"
+        },
+        {
+          "role": "combobox",
+          "name": "Relationship"
+        },
+        {
+          "role": "combobox",
+          "name": "Parent table"
+        },
+        {
+          "role": "combobox",
+          "name": "Child table"
+        },
+        {
+          "role": "combobox",
+          "name": "Child link column"
+        },
+        {
+          "role": "combobox",
+          "name": "Relationship"
+        },
+        {
+          "role": "textbox",
+          "name": "Table 1 column 2 name"
+        },
+        {
+          "role": "combobox",
+          "name": "Data type"
+        },
+        {
+          "role": "combobox",
+          "name": "How to create values"
+        },
+        {
+          "role": "combobox",
+          "name": "Generation rule"
+        },
+        {
+          "role": "textbox",
+          "name": "Choices, separated by commas"
+        },
+        {
+          "role": "textbox",
+          "name": "Table 1 column 3 name"
+        },
+        {
+          "role": "combobox",
+          "name": "Data type"
+        },
+        {
+          "role": "combobox",
+          "name": "How to create values"
+        },
+        {
+          "role": "textbox",
+          "name": "Table 2 column 2 name"
+        },
+        {
+          "role": "combobox",
+          "name": "Data type"
+        },
+        {
+          "role": "combobox",
+          "name": "How to create values"
+        },
+        {
+          "role": "combobox",
+          "name": "Generation rule"
+        },
+        {
+          "role": "textbox",
+          "name": "Choices, separated by commas"
+        },
+        {
+          "role": "textbox",
+          "name": "Table 3 column 2 name"
+        },
+        {
+          "role": "combobox",
+          "name": "Data type"
+        },
+        {
+          "role": "combobox",
+          "name": "How to create values"
+        },
+        {
+          "role": "combobox",
+          "name": "Generation rule"
+        },
+        {
+          "role": "textbox",
+          "name": "Table 3 column 3 name"
+        },
+        {
+          "role": "combobox",
+          "name": "Data type"
+        },
+        {
+          "role": "combobox",
+          "name": "How to create values"
+        },
+        {
+          "role": "combobox",
+          "name": "Generation rule"
+        },
+        {
+          "role": "textbox",
+          "name": "Table 3 column 4 name"
+        },
+        {
+          "role": "combobox",
+          "name": "Data type"
+        },
+        {
+          "role": "combobox",
+          "name": "How to create values"
+        },
+        {
+          "role": "combobox",
+          "name": "Generation rule"
+        },
+        {
+          "role": "textbox",
+          "name": "From"
+        },
+        {
+          "role": "textbox",
+          "name": "To"
+        },
+        {
+          "role": "textbox",
+          "name": "Table 3 column 5 name"
+        },
+        {
+          "role": "combobox",
+          "name": "Data type"
+        },
+        {
+          "role": "combobox",
+          "name": "How to create values"
+        },
+        {
+          "role": "combobox",
+          "name": "Generation rule"
+        },
+        {
+          "role": "textbox",
+          "name": "From"
+        },
+        {
+          "role": "textbox",
+          "name": "To"
+        },
+        {
+          "role": "textbox",
+          "name": "Table 3 column 6 name"
+        },
+        {
+          "role": "combobox",
+          "name": "Data type"
+        },
+        {
+          "role": "combobox",
+          "name": "How to create values"
+        },
+        {
+          "role": "combobox",
+          "name": "First column"
+        },
+        {
+          "role": "combobox",
+          "name": "Operation"
+        },
+        {
+          "role": "combobox",
+          "name": "Second column"
+        }
+      ]
+    },
+    {
+      "name": "Relational evidence report with details expanded",
+      "url": "http://127.0.0.1:8772/",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.10/color-contrast?application=axeAPI",
+          "targets": [
+            [
+              "button[aria-label=\"Step 1: Start\"] > .step-num"
+            ],
+            [
+              "button[aria-label=\"Step 2: Design\"] > .step-num"
+            ],
+            [
+              ".theme-toggle > span[aria-hidden=\"true\"]"
+            ],
+            [
+              ".primary > span[aria-hidden=\"true\"]"
+            ],
+            [
+              ".notice[data-tone=\"good\"] > .notice-icon[aria-hidden=\"true\"]"
+            ]
+          ]
+        }
+      ],
+      "passCount": 39,
+      "accessibilityTree": [
+        {
+          "role": "link",
+          "name": "Skip to main content"
+        },
+        {
+          "role": "main",
+          "name": ""
+        },
+        {
+          "role": "navigation",
+          "name": "Dataset workflow"
+        },
+        {
+          "role": "button",
+          "name": "Switch to dark theme"
+        },
+        {
+          "role": "heading",
+          "name": "Evidence report"
+        },
+        {
+          "role": "navigation",
+          "name": "Result tables"
+        },
+        {
+          "role": "status",
+          "name": ""
+        },
+        {
+          "role": "button",
+          "name": "Step 1: Start"
+        },
+        {
+          "role": "button",
+          "name": "Step 2: Design"
+        },
+        {
+          "role": "button",
+          "name": "Step 3: Generate"
+        },
+        {
+          "role": "button",
+          "name": "Step 4: Evidence"
+        },
+        {
+          "role": "button",
+          "name": "customers (20)"
+        },
+        {
+          "role": "button",
+          "name": "products (12)"
+        },
+        {
+          "role": "button",
+          "name": "order_lines (89)"
+        },
+        {
+          "role": "button",
+          "name": "Show all tables"
+        },
+        {
+          "role": "heading",
+          "name": "Declared constraints"
+        },
+        {
+          "role": "heading",
+          "name": "Repairs applied after generation"
+        },
+        {
+          "role": "heading",
+          "name": "Computed, not generated"
+        },
+        {
+          "role": "table",
+          "name": ""
+        },
+        {
+          "role": "heading",
+          "name": "Preview"
+        },
+        {
+          "role": "region",
+          "name": "Data preview; scroll horizontally for more columns"
+        },
+        {
+          "role": "table",
+          "name": ""
+        },
+        {
+          "role": "heading",
+          "name": "Children per parent"
+        },
+        {
+          "role": "table",
+          "name": ""
+        },
+        {
+          "role": "link",
+          "name": "Download full report (JSON)"
+        },
+        {
+          "role": "link",
+          "name": "Download specification (JSON)"
+        },
+        {
+          "role": "button",
+          "name": "Start another dataset"
+        },
+        {
+          "role": "heading",
+          "name": "Privacy"
+        },
+        {
+          "role": "heading",
+          "name": "Checks and results"
+        },
+        {
+          "role": "heading",
+          "name": "order_lines"
+        },
+        {
+          "role": "link",
+          "name": "Download CSV"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "Review 14 checks · all passed"
+        },
+        {
+          "role": "table",
+          "name": "Dataset preview"
+        },
+        {
+          "role": "heading",
+          "name": "Relational integrity"
+        },
+        {
+          "role": "heading",
+          "name": "Open assumptions"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "Review 13 unconfirmed assumptions"
+        },
+        {
+          "role": "region",
+          "name": "Unconfirmed assumptions"
+        },
+        {
+          "role": "heading",
+          "name": "Reproduction"
+        },
+        {
+          "role": "table",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "name": "Uploaded-data review with suggested fix",
+      "url": "http://127.0.0.1:8772/",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.10/color-contrast?application=axeAPI",
+          "targets": [
+            [
+              "button[data-done=\"true\"] > .step-num"
+            ],
+            [
+              ".theme-toggle > span[aria-hidden=\"true\"]"
+            ],
+            [
+              ".button-link > span[aria-hidden=\"true\"]"
+            ]
+          ]
+        }
+      ],
+      "passCount": 44,
+      "accessibilityTree": [
+        {
+          "role": "link",
+          "name": "Skip to main content"
+        },
+        {
+          "role": "main",
+          "name": ""
+        },
+        {
+          "role": "navigation",
+          "name": "Dataset workflow"
+        },
+        {
+          "role": "button",
+          "name": "Switch to dark theme"
+        },
+        {
+          "role": "heading",
+          "name": "Review your dataset"
+        },
+        {
+          "role": "button",
+          "name": "Edit tables, columns and relationships"
+        },
+        {
+          "role": "link",
+          "name": "Go to generation settings"
+        },
+        {
+          "role": "button",
+          "name": "Step 1: Start"
+        },
+        {
+          "role": "button",
+          "name": "Step 2: Design"
+        },
+        {
+          "role": "button",
+          "name": "Step 3: Generate"
+        },
+        {
+          "role": "button",
+          "name": "Step 4: Evidence"
+        },
+        {
+          "role": "alert",
+          "name": ""
+        },
+        {
+          "role": "alert",
+          "name": ""
+        },
+        {
+          "role": "table",
+          "name": ""
+        },
+        {
+          "role": "region",
+          "name": "Data preview; scroll horizontally for more columns"
+        },
+        {
+          "role": "button",
+          "name": "Generate dataset"
+        },
+        {
+          "role": "DisclosureTriangle",
+          "name": "View the raw specification"
+        },
+        {
+          "role": "heading",
+          "name": "Suggested fix"
+        },
+        {
+          "role": "button",
+          "name": "Apply suggested fix"
+        },
+        {
+          "role": "heading",
+          "name": "A few details need attention"
+        },
+        {
+          "role": "heading",
+          "name": "Warnings"
+        },
+        {
+          "role": "heading",
+          "name": "public_fixture"
+        },
+        {
+          "role": "heading",
+          "name": "Source preview"
+        },
+        {
+          "role": "table",
+          "name": "Dataset preview"
+        },
+        {
+          "role": "heading",
+          "name": "Generation settings"
+        },
+        {
+          "role": "combobox",
+          "name": "ENGINE"
+        },
+        {
+          "role": "combobox",
+          "name": "MEASURE USEFULNESS FOR PREDICTING Trains a model on the synthetic data and scores it against held-out real rows, alongside real-data training and an independent-sampling floor."
+        }
+      ]
+    }
+  ]
+}

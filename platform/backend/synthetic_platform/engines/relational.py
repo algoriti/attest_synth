@@ -16,6 +16,19 @@ from .base import EngineAdapter, GenerationOutcome, register
 from .rules import RuleEngine
 
 
+class RelationalFeasibilityError(ValueError):
+    """A declared row count or cardinality range cannot jointly be satisfied.
+
+    Every raise in this module using this type is a clean, human-authored message
+    about a specification the person can fix — a row count that doesn't fit the
+    declared child-count range, a junction whose two sides can't be reconciled, a
+    solver that ran out of time. None of it is an engine bug. Giving these their own
+    type lets the API present them as a rejected specification (message only, no
+    traceback) instead of "the engine failed" with a Python stack trace, without
+    changing what `run()` itself raises for direct callers.
+    """
+
+
 @register
 class RelationalRuleEngine(EngineAdapter):
     name = "relational_rules"
@@ -30,7 +43,9 @@ class RelationalRuleEngine(EngineAdapter):
             "learns_from_records": False,
             "schema_only": True,
             "conditional_sampling": False,
-            "cross_table_constraints": False,
+            "cross_table_constraints": True,
+            "cross_table_operations": ["parent_child_less_or_equal", "parent_child_greater_or_equal"],
+            "aggregates": ["count", "sum", "mean", "min", "max"],
             "one_to_many": True,
             "many_to_many": True,
             "max_parents_per_child": 2,
@@ -85,7 +100,7 @@ class RelationalRuleEngine(EngineAdapter):
             total = len(next(iter(assignments.values()))) if assignments else 0
 
             if total > 200000:
-                raise ValueError("Relationship expansion exceeds 200,000 rows per table.")
+                raise RelationalFeasibilityError("Relationship expansion exceeds 200,000 rows per table.")
 
             outcome = rule_engine.generate(spec, table, total, None)
             frame = outcome.frame
@@ -122,7 +137,7 @@ def generation_order(spec: SyntheticDataSpec) -> list[str]:
     while remaining:
         ready = sorted(n for n in remaining if parents[n] <= set(ordered))
         if not ready:
-            raise ValueError(
+            raise RelationalFeasibilityError(
                 "relationship graph is cyclic or references a missing table: "
                 + ", ".join(sorted(remaining))
             )
@@ -159,7 +174,7 @@ def _assign_parent_keys(
         nulls = round(table.rows * rel.null_fraction)
         linked = table.rows - nulls
         counts = _bounded_counts(len(keys), low, high, linked, rng)
-    if linked + nulls > 200000: raise ValueError("Relationship expansion exceeds 200,000 rows.")
+    if linked + nulls > 200000: raise RelationalFeasibilityError("Relationship expansion exceeds 200,000 rows.")
     expanded = np.repeat(keys, counts)
     if nulls: expanded = np.concatenate([expanded.astype(object), np.full(nulls, None)])
     rng.shuffle(expanded)
@@ -168,7 +183,7 @@ def _assign_parent_keys(
 
 def _bounded_counts(n, low, high, total, rng):
     if total < n * low or total > n * high:
-        raise ValueError(f"Infeasible child count: {total} requested; allowed {n*low}..{n*high}.")
+        raise RelationalFeasibilityError(f"Infeasible child count: {total} requested; allowed {n*low}..{n*high}.")
     counts = np.full(n, low, dtype=int)
     left = total - n * low
     # Distribute remaining counts without allocating a huge repeated-key pool.
@@ -187,7 +202,7 @@ def _junction_keys(table, incoming, frames, rng):
     ka,kb = (frames[r.parent_table][r.parent_key].to_numpy() for r in incoming)
     na,nb = len(ka),len(kb)
     if na*nb > 50000:
-        raise ValueError("This PoC supports junctions with at most 50,000 possible parent pairs.")
+        raise RelationalFeasibilityError("This PoC supports junctions with at most 50,000 possible parent pairs.")
     def bounds(rel,n,first=False):
         lo = rel.child_count_min if rel.child_count_min is not None else (1 if first else 0)
         hi = rel.child_count_max if rel.child_count_max is not None else (5 if first else 200000)
@@ -197,12 +212,12 @@ def _junction_keys(table, incoming, frames, rng):
     unique = any(set(k)=={a.child_key,b.child_key} for k in table.unique_keys)
     if unique: ha,hb = min(ha,nb),min(hb,na)
     lower,upper = max(na*la,nb*lb),min(na*ha,nb*hb,200000)
-    if lower>upper: raise ValueError("Infeasible junction cardinalities across the two parents.")
+    if lower>upper: raise RelationalFeasibilityError("Infeasible junction cardinalities across the two parents.")
     total = table.rows if table.rows is not None else int(rng.integers(lower,upper+1))
-    if total<lower or total>upper: raise ValueError(f"Junction row count must be between {lower} and {upper}.")
+    if total<lower or total>upper: raise RelationalFeasibilityError(f"Junction row count must be between {lower} and {upper}.")
     if not total:
         return {a.child_key:ka[:0],b.child_key:kb[:0]}
-    if not na or not nb: raise ValueError("Nonempty junction requires both parent tables.")
+    if not na or not nb: raise RelationalFeasibilityError("Nonempty junction requires both parent tables.")
     matrix = lil_matrix((na+nb+1,na*nb))
     for i in range(na): matrix[i,i*nb:(i+1)*nb]=1
     for j in range(nb): matrix[na+j,j::nb]=1
@@ -212,7 +227,7 @@ def _junction_keys(table, incoming, frames, rng):
         constraints=LinearConstraint(matrix.tocsr(),[la]*na+[lb]*nb+[total],[ha]*na+[hb]*nb+[total]),
         options={'time_limit':10})
     if not solution.success or solution.x is None:
-        raise ValueError("Could not satisfy junction bounds within the solver limit; reduce counts or relax the declared rules.")
+        raise RelationalFeasibilityError("Could not satisfy junction bounds within the solver limit; reduce counts or relax the declared rules.")
     cells = np.repeat(np.arange(na*nb),np.rint(solution.x).astype(int))
     rng.shuffle(cells)
     return {a.child_key:ka[cells//nb],b.child_key:kb[cells%nb]}

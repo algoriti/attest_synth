@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   api,
+  type AssistantReview,
   type Engine,
   type EvidenceReport,
   type Job,
@@ -13,15 +14,15 @@ import {
   type ValidationResult,
 } from "./api";
 import { Badge, Card, DataPreview, FindingList, Notice, RoleChip, Spinner } from "./components";
-import { ReportView } from "./ReportView";
+const ReportView = lazy(() => import("./ReportView").then(module => ({ default: module.ReportView })));
 import "./theme.css";
 import { SpecEditor, blankSpec } from "./SpecEditor";
 
 type Step = "start" | "review" | "generate" | "report";
 
 const STEPS: { id: Step; label: string }[] = [
-  { id: "start", label: "Source" },
-  { id: "review", label: "Specification" },
+  { id: "start", label: "Start" },
+  { id: "review", label: "Design" },
   { id: "generate", label: "Generate" },
   { id: "report", label: "Evidence" },
 ];
@@ -40,6 +41,21 @@ export default function App() {
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [assistantReview, setAssistantReview] = useState<AssistantReview | null>(null);
+  const [unsaved, setUnsaved] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    mainRef.current?.focus();
+    window.scrollTo(0, 0);
+  }, [step]);
+
+  useEffect(() => {
+    if (!unsaved) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [unsaved]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -58,17 +74,22 @@ export default function App() {
     setValidation(null);
     setJob(null);
     setError(null);
+    setAssistantReview(null);
+    setUnsaved(false);
     setStep("start");
   }, []);
 
   const goReview = useCallback(
-    async (next: Spec, upload?: string) => {
-      setSpec(next);
+    async (next: Spec, upload?: string, review?: AssistantReview) => {
       setUploadId(upload);
+      setAssistantReview(review ?? null);
       setError(null);
-      setStep("review");
       try {
-        setValidation(await api.validate(next));
+        const result = await api.validate(next);
+        if (!result.spec) throw new Error(result.findings.map(f=>f.message).join(' '));
+        setSpec(result.spec);
+        setValidation(result);
+        setStep("review");
       } catch (exc) {
         setError(String(exc));
       }
@@ -80,21 +101,28 @@ export default function App() {
 
   return (
     <div className="app">
+      <a className="skip-link" href="#main-content">Skip to main content</a>
       <header className="topbar">
         <div className="brand">
-          <span className="brand-mark" />
-          <span>Synthetic Data Platform</span>
+          <span className="brand-mark" aria-hidden="true">a</span>
+          <span>Attest <span className="brand-light">Synth</span><span className="brand-caption">Attest Synth workspace</span></span>
         </div>
         <span className="spacer" />
-        <nav className="steps">
+        <nav className="steps" aria-label="Dataset workflow">
           {STEPS.map((entry, index) => (
             <button
               key={entry.id}
               className="step"
               data-active={entry.id === step}
               data-done={index < stepIndex}
-              disabled={index > stepIndex}
-              onClick={() => index <= stepIndex && setStep(entry.id)}
+              aria-current={entry.id === step ? "step" : undefined}
+              aria-label={`Step ${index + 1}: ${entry.label}`}
+              disabled={index > stepIndex || (entry.id === 'generate' && step === 'report')}
+              onClick={() => {
+                if (entry.id === step) return;
+                if (unsaved && !window.confirm('Leave the editor and discard unapplied changes?')) return;
+                setUnsaved(false);setError(null);setStep(entry.id);
+              }}
             >
               <span className="step-num">{index < stepIndex ? "✓" : index + 1}</span>
               <span>{entry.label}</span>
@@ -102,12 +130,12 @@ export default function App() {
           ))}
         </nav>
         <span className="spacer" />
-        <button className="ghost" onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
-          {theme === "light" ? "Dark" : "Light"}
+        <button className="ghost theme-toggle" aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`} onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
+          <span aria-hidden="true">{theme === "light" ? "◐" : "☀"}</span><span>{theme === "light" ? "Dark" : "Light"}</span>
         </button>
       </header>
 
-      <main>
+      <main id="main-content" ref={mainRef} tabIndex={-1}>
         {error ? (
           <Notice tone="critical" title="Something went wrong">
             {error}
@@ -126,8 +154,9 @@ export default function App() {
             validation={validation}
             engines={engines}
             onValidate={async (next) => {
-              setSpec(next);
-              setValidation(await api.validate(next));
+              const result = await api.validate(next);
+              if (result.spec) setSpec(result.spec);
+              setValidation(result);
             }}
             onGenerate={(jobId) => {
               setJob({ id: jobId, status: "queued", spec_name: spec.name, created_utc: "", progress: "queued" });
@@ -135,6 +164,8 @@ export default function App() {
             }}
             uploadId={uploadId}
             onError={setError}
+            onDirty={setUnsaved}
+            assistantReview={assistantReview}
           />
         )}
 
@@ -150,12 +181,14 @@ export default function App() {
         )}
 
         {step === "report" && job?.report && (
+          <Suspense fallback={<div className="row" role="status"><Spinner /> Preparing your evidence report…</div>}>
           <ReportView
             report={job.report as EvidenceReport}
             previews={job.previews ?? {}}
             jobId={job.id}
             onRestart={reset}
           />
+          </Suspense>
         )}
       </main>
     </div>
@@ -171,7 +204,7 @@ function StartView({
   onError,
 }: {
   engines: Engine[];
-  onReady: (spec: Spec, uploadId?: string) => void;
+  onReady: (spec: Spec, uploadId?: string, review?: AssistantReview) => void;
   onProfile: (profile: ProfileReport | null, preview: Preview | null) => void;
   onError: (message: string) => void;
 }) {
@@ -180,6 +213,7 @@ function StartView({
   const [assistantReady,setAssistantReady]=useState(false);
   const [prompt,setPrompt]=useState('');
   const [proposing,setProposing]=useState(false);
+  const [assistantError,setAssistantError]=useState('');
   useEffect(()=>{api.assistantConfig().then(c=>setAssistantReady(c.configured)).catch(()=>setAssistantReady(false));},[]);
   const [dragging, setDragging] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -226,138 +260,81 @@ function StartView({
 
   return (
     <>
-      <div className="page-head">
+      <div className="page-head start-head">
+        <div className="eyebrow">Your next dataset starts here</div>
         <h1>Create a dataset</h1>
-        <p>
-          Upload an approved CSV to learn from, or start from a schema and generate without any
-          source records at all. Either path produces the same kind of specification.
-        </p>
+        <p>Build the records you need, then see the evidence behind them. Start with your own design or learn from approved data.</p>
       </div>
 
-      <div className="grid grid-2">
-        <Card title="Learn from approved records" sub="Upload a CSV">
-          <div
+      <div className="grid grid-2 source-paths">
+        <Card title="Start with your design" sub="No source data needed" className="design-path">
+          <div className="path-symbol" aria-hidden="true">＋</div>
+          <p>Choose your columns, define values and connect tables. The guided editor walks you through each choice.</p>
+          <button className="primary" onClick={()=>{onProfile(null,null);onReady(blankSpec());}}>Create your own dataset <span aria-hidden="true">↗</span></button>
+          <p className="path-note">Generated values follow your assumptions. They do not establish facts about a real population.</p>
+          <details className="import-details">
+            <summary>Already have a specification?</summary>
+            <label className="import-button">Import specification JSON<input aria-label="Import specification JSON" type="file" accept=".json" onChange={async e=>{const file=e.target.files?.[0];if(!file)return;try{const spec=JSON.parse(await file.text());const result=await api.validate(spec);if(!result.ok)throw new Error(result.findings.map(f=>f.message).join(' '));onProfile(null,null);onReady(spec);}catch(exc){onError(String(exc));}e.target.value='';}}/></label>
+          </details>
+        </Card>
+        <Card title="Learn from existing data" sub="Upload an approved CSV or TSV" className="upload-path">
+          <button
             className="dropzone"
+            disabled={busy}
+            aria-label="Upload a CSV or TSV"
+            aria-busy={busy}
             data-over={dragging}
             onClick={() => fileInput.current?.click()}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragging(true);
-            }}
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
             onDragLeave={() => setDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragging(false);
-              const file = e.dataTransfer.files?.[0];
-              if (file) void handleFile(file);
-            }}
+            onDrop={(e) => { e.preventDefault(); setDragging(false); const file=e.dataTransfer.files?.[0]; if(file&&!busy)void handleFile(file); }}
           >
-            {busy ? (
-              <div className="row" style={{ justifyContent: "center" }}>
-                <Spinner />
-                <span className="secondary">Profiling…</span>
-              </div>
-            ) : (
-              <>
-                <div style={{ fontSize: 22, marginBottom: 6 }}>↑</div>
-                <div style={{ fontWeight: 600 }}>Drop a CSV here or click to browse</div>
-                <div className="small muted" style={{ marginTop: 4 }}>
-                  The profiler proposes column roles, finds business rules and flags data quality
-                  problems. Nothing is applied until you confirm it.
-                </div>
-              </>
-            )}
-          </div>
-          <input
-            ref={fileInput}
-            type="file"
-            accept=".csv,.tsv,.txt"
-            hidden
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void handleFile(file);
-            }}
-          />
-          <Notice tone="warning" title="Upload only data you are authorised to use">
-            Learned output is not anonymised. Records stay on this machine, but the platform applies
-            no privacy mechanism to what it generates from them.
-          </Notice>
-        </Card>
-
-        <Card title="Start from a schema" sub="No source records needed">
-          <div className="row" style={{marginBottom:16}}>
-            <button className="primary" onClick={()=>{onProfile(null,null);onReady(blankSpec());}}>Create your own dataset</button>
-            <label className="import-button">Import specification JSON<input aria-label="Import specification JSON" type="file" accept=".json" onChange={async e=>{const file=e.target.files?.[0];if(!file)return;try{const spec=JSON.parse(await file.text());const result=await api.validate(spec);if(!result.ok)throw new Error(result.findings.map(f=>f.message).join(' '));onProfile(null,null);onReady(spec);}catch(exc){onError(String(exc));}e.target.value='';}}/></label>
-          </div>
-          <p className="small secondary">
-            Every distribution is one you declare. Avoid including real identifying values. A
-            model trained on the result has learned your assumptions rather than a fact about any
-            population.
-          </p>
-          <div className="grid" style={{ gap: 10 }}>
-            {examples.map((example) => (
-              <button
-                key={example.id}
-                className="example-card"
-                onClick={() => {
-                  onProfile(null, null);
-                  onReady(example.spec);
-                }}
-              >
-                <div className="row" style={{ gap: 8 }}>
-                  <span className="name">{example.name}</span>
-                  <Badge tone={example.mode === "relational_rules" ? "accent" : "neutral"}>
-                    {example.mode.replace(/_/g, " ")}
-                  </Badge>
-                </div>
-                <span className="desc">{example.description}</span>
-              </button>
-            ))}
-            {examples.length === 0 ? <p className="small muted">No examples available.</p> : null}
-          </div>
+            <span className="upload-symbol" aria-hidden="true">↑</span>
+            <strong>{busy ? 'Reading your data…' : 'Drop a file here, or browse'}</strong>
+            <span className="small secondary">{busy ? 'Checking columns and suggesting a starting design.' : 'CSV or TSV · up to 20 MB'}</span>
+            {busy && <Spinner />}
+          </button>
+          <input ref={fileInput} type="file" accept=".csv,.tsv,.txt" hidden onChange={(e)=>{const file=e.target.files?.[0];if(file)void handleFile(file);e.target.value='';}}/>
+          <p className="path-note">Review suggested columns and rules before generating. Use only authorised data; learned output has no privacy guarantee.</p>
         </Card>
       </div>
 
-      <Card title="Describe the dataset you need" sub="Optional hosted assistant — creates a proposal for you to review">
-        <label className="stack">Your scenario<textarea rows={3} maxLength={4000} value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder="For example: 30 customers, each with 1 to 4 orders, with totals calculated from quantity and price."/></label>
-        <p className="small secondary">Only these instructions and the specification format are sent to the hosted provider. Uploaded records are not included. Do not enter real personal records here.</p>
-        {!assistantReady&&<Notice tone="neutral">The hosted assistant is not configured yet. You can use the guided editor and examples now.</Notice>}
-        <button className="primary" disabled={!assistantReady||proposing||prompt.trim().length<10} onClick={async()=>{setProposing(true);try{const result=await api.propose(prompt);onProfile(null,null);onReady(result.spec);}catch(exc){onError(String(exc));}finally{setProposing(false);}}}>{proposing?'Preparing your proposal…':'Propose a dataset'}</button>
-      </Card>
-      <Card title="Registered engines" sub="Capabilities are declared, not assumed">
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Engine</th>
-                <th>Role</th>
-                <th>Source records</th>
-                <th>Multi-table</th>
-                <th>Privacy</th>
-              </tr>
-            </thead>
-            <tbody>
-              {engines.map((engine) => (
-                <tr key={engine.name}>
-                  <td>
-                    <div className="row" style={{ gap: 6 }}>
-                      <strong>{engine.label}</strong>
-                      {engine.baseline ? <Badge tone="warning">baseline</Badge> : null}
-                    </div>
-                    <div className="small muted mono">{engine.name}</div>
-                  </td>
-                  <td className="small secondary">{engine.description}</td>
-                  <td>{engine.learns_from_records ? "required" : "not needed"}</td>
-                  <td>{engine.multi_table ? "yes" : "no"}</td>
-                  <td>
-                    <Badge tone="critical">{engine.privacy_mechanism}</Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section className="template-section" aria-labelledby="templates-heading">
+        <div className="section-heading"><div><div className="eyebrow">A starting point, ready to edit</div><h2 id="templates-heading">Explore a template</h2></div><span className="small secondary">Different domains. The same workflow.</span></div>
+        <div className="template-grid">
+          {examples.map((example) => (
+            <button key={example.id} className="example-card" data-example={example.id} onClick={()=>{onProfile(null,null);onReady(example.spec);}}>
+              <span className="template-kind">{example.mode==='relational_rules'?'Linked tables':'Single table'}<span aria-hidden="true">↗</span></span>
+              <span className="name">{({education_relational:'Students & courses',employee_relational:'People & attendance',retail_orders:'Retail orders',retail_relational:'Customers & purchases',sensor_readings:'Sensor readings'} as Record<string,string>)[example.id]??example.name.replace(/_/g,' ')}</span>
+              <span className="desc">{example.description}</span>
+              <span className="template-meta">{example.spec.tables.length} {example.spec.tables.length===1?'table':'tables'} · {example.spec.tables.reduce((n,t)=>n+t.columns.length,0)} columns</span>
+            </button>
+          ))}
+          {examples.length===0&&<p className="small secondary">Templates are unavailable. You can still create your own dataset.</p>}
+        </div>
+      </section>
+
+      <Card title="Turn an idea into a starting design" sub="Optional AI assistant · you review every proposal" className="assistant-card">
+        <div className="assistant-layout">
+          <div><p>Describe the records and relationships you need in your own words.</p><p className="small secondary">Only your description and the specification format go to the hosted provider. Uploaded records stay out of the request. Do not include personal records.</p><Badge tone={assistantReady?'good':'neutral'}>{assistantReady?'Assistant connected':'Assistant not configured'}</Badge></div>
+          <div className="stack">
+            <label className="stack" htmlFor="scenario">Your scenario<textarea id="scenario" rows={4} maxLength={4000} value={prompt} onChange={e=>{setPrompt(e.target.value);setAssistantError('');}} placeholder="For example: 30 customers, each with 1 to 4 orders. Calculate each order total from quantity and price." aria-describedby="scenario-help"/></label>
+            {assistantError&&<Notice tone="critical" title="The assistant could not build this proposal">{assistantError}</Notice>}
+            <div className="assistant-actions"><span id="scenario-help" className="small secondary">{proposing?'Preparing and validating a proposal. One correction may be attempted.':!assistantReady?'Use the guided editor or templates while the assistant is unavailable.':prompt.trim().length<10?'Describe your idea in at least 10 characters.':`${prompt.length.toLocaleString()} / 4,000 characters`}</span><button className="primary" disabled={!assistantReady||proposing||prompt.trim().length<10} onClick={async()=>{setProposing(true);setAssistantError('');try{const result=await api.propose(prompt);onProfile(null,null);onReady(result.spec,undefined,result.review);}catch(exc){setAssistantError(String(exc).replace(/^Error:\s*/,''));}finally{setProposing(false);}}}>{proposing?<><Spinner /> Preparing proposal…</>:'Propose a dataset'}</button></div>
+          </div>
         </div>
       </Card>
+      <details className="engine-details">
+        <summary>Under the hood <span className="small secondary">Explore generation engines and their limits</span></summary>
+        <Card title="Available engines" sub="Choose an engine when reviewing your dataset.">
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Engine comparison">
+            <table><thead><tr><th>Engine</th><th>What it does</th><th>Source records</th><th>Linked tables</th><th>Privacy mechanism</th></tr></thead>
+              <tbody>{engines.map(engine=><tr key={engine.name}><td><strong>{engine.label}</strong>{engine.baseline&&<Badge tone="neutral">Baseline</Badge>}</td><td className="secondary">{engine.description}</td><td>{engine.learns_from_records?'Required':'Not needed'}</td><td>{engine.multi_table?'Supported':'No'}</td><td>{engine.privacy_mechanism==='none'?'None':engine.privacy_mechanism}</td></tr>)}</tbody>
+            </table>
+          </div>
+        </Card>
+      </details>
+      <footer className="workspace-footer"><span>Attest Synth</span><span>Define your data. Inspect its evidence.</span></footer>
     </>
   );
 }
@@ -376,6 +353,8 @@ function ReviewView({
   onGenerate,
   uploadId,
   onError,
+  onDirty,
+  assistantReview,
 }: {
   spec: Spec;
   setSpec: (spec: Spec) => void;
@@ -388,9 +367,12 @@ function ReviewView({
   onGenerate: (jobId: string) => void;
   uploadId?: string;
   onError: (message: string) => void;
+  onDirty: (dirty: boolean) => void;
+  assistantReview: AssistantReview | null;
 }) {
-  const [rows, setRows] = useState<number>(spec.tables[0]?.rows ?? 1000);
-  useEffect(()=>setRows(spec.tables[0]?.rows??1000),[spec.tables[0]?.rows]);
+  const specifiedRows = spec.tables[0]?.rows ?? 1000;
+  const [rows, setRows] = useState<number>(specifiedRows);
+  useEffect(()=>setRows(specifiedRows),[specifiedRows]);
   const [starting, setStarting] = useState(false);
   const [editorDirty,setEditorDirty]=useState(false);
   const [showEditor,setShowEditor]=useState(false);
@@ -491,21 +473,35 @@ function ReviewView({
   // A derived column is predictable from its own formula, so it measures the formula
   // rather than the synthesis. It stays selectable but is labelled as such.
   const utilityTargets = (spec.tables[0]?.columns ?? []).filter(
-    (column) => !["identifier", "empty", "constant", "derived"].includes(column.role) && !["date","timestamp"].includes(column.type),
+    (column) => !["identifier", "foreign_key", "empty", "constant", "derived"].includes(column.role) && !["date","timestamp"].includes(column.type),
   );
 
   return (
     <>
       <div className="page-head">
-        <h1>{spec.name}</h1>
+        <div className="eyebrow">Step 02 · Design & review</div>
+        <h1>Review your dataset</h1>
         <p>
-          Review what the platform intends to do before anything is generated. Column roles decide
-          what a generator is even allowed to model.
+          <strong>{spec.name}</strong> · Check the columns, rules and relationships. You can change the design before generating.
         </p>
       </div>
 
-      <div className="row" style={{marginBottom:16}}><button onClick={()=>setShowEditor(!showEditor)} aria-expanded={showEditor}>{showEditor?'Hide dataset editor':'Edit tables, columns and relationships'}</button><span className="small secondary">Use guided controls or advanced JSON. Apply changes before generation.</span></div>
-      {showEditor&&<SpecEditor key={JSON.stringify(spec)} spec={spec} onApply={onValidate} onDirty={setEditorDirty}/>}
+      <div className="review-overview">
+        <div className="review-counts"><span><strong>{spec.tables.length}</strong> {spec.tables.length===1?'table':'tables'}</span><span><strong>{spec.tables.reduce((n,t)=>n+t.columns.length,0)}</strong> {spec.tables.reduce((n,t)=>n+t.columns.length,0)===1?'column':'columns'}</span><span><strong>{spec.relationships.length}</strong> relationships</span></div>
+        <Badge tone={editorDirty?'warning':validation?.ok?'good':'critical'}>{editorDirty?'Unapplied edits':validation?.ok?'Ready to generate':'Needs attention'}</Badge>
+      </div>
+      {assistantReview&&(
+        <Card title="Assistant reconciliation" sub="What the platform preserved, corrected or could not represent">
+          {assistantReview.explicit_row_requirements.map(requirement=><Notice key={requirement.table} tone="good" title={`${requirement.requested_rows.toLocaleString()} ${requirement.table}`}>
+            Preserved from your prompt{requirement.changed&&requirement.assistant_rows!==null?`; the assistant initially proposed ${requirement.assistant_rows.toLocaleString()}`:''}.
+          </Notice>)}
+          {assistantReview.unsupported_requests.map((message,index)=><Notice key={index} tone="warning" title="Requested calculation is outside the current engine">{message}</Notice>)}
+          {assistantReview.omitted_tables.length>0&&<p className="small secondary">Omitted rather than fabricated: <code>{assistantReview.omitted_tables.join(', ')}</code>.</p>}
+          {assistantReview.correction_attempted&&<p className="small secondary">The first model response failed platform checks. One bounded correction was applied and this is the validated proposal.</p>}
+        </Card>
+      )}
+      <div className="review-toolbar"><button onClick={()=>setShowEditor(!showEditor)} aria-expanded={showEditor} aria-controls="dataset-editor">{showEditor?'Hide dataset editor':'Edit tables, columns and relationships'}</button><a className="button-link" href="#generation-settings">Go to generation settings <span aria-hidden="true">↓</span></a></div>
+      <div id="dataset-editor" hidden={!showEditor}><SpecEditor key={JSON.stringify(spec)} spec={spec} onApply={onValidate} onDirty={dirty=>{setEditorDirty(dirty);onDirty(dirty);}}/></div>
       {derivedNotes.length > 0 ? (
         <Card
           title="Possible rules to review"
@@ -516,7 +512,7 @@ function ReviewView({
                 <span className="small secondary">Site timezone</span>
                 <select
                   value={tzOffset}
-                  disabled={reprofiling}
+                  disabled={reprofiling || editorDirty}
                   onChange={(e) => void reprofile(Number(e.target.value))}
                 >
                   {TIMEZONE_OFFSETS.map((offset) => (
@@ -554,7 +550,7 @@ function ReviewView({
                         {((note.agreement ?? 0) * 100).toFixed(1)}%{note.eligible_rows!==undefined?` (${note.match_count}/${note.eligible_rows})`:""}
                       </Badge>
                     </td>
-                    <td><div className="row"><button onClick={()=>{const next=structuredClone(spec);const c=next.tables[0].columns.find(c=>c.name===note.column);if(c){c.provenance={origin:'user',detail:'Accepted as a scenario rule by the user',confirmed:true};void onValidate(next);}}}>Accept rule</button><button onClick={()=>{const next=structuredClone(spec);const c=next.tables[0].columns.find(c=>c.name===note.column);if(c){c.role='learned';delete c.formula;c.provenance={origin:'profiled',detail:'Candidate formula rejected; learn observed values',confirmed:false};void onValidate(next);}}}>Learn instead</button></div><span className="small">{spec.tables[0].columns.find(c=>c.name===note.column)?.role==='learned'?'Rejected':spec.tables[0].columns.find(c=>c.name===note.column)?.provenance?.confirmed?'Accepted':'Unconfirmed'}</span></td>
+                    <td><div className="row"><button disabled={editorDirty} onClick={()=>{const next=structuredClone(spec);const c=next.tables[0].columns.find(c=>c.name===note.column);if(c){c.provenance={origin:'user',detail:'Accepted as a scenario rule by the user',confirmed:true};void onValidate(next);}}}>Accept rule</button><button disabled={editorDirty} onClick={()=>{const next=structuredClone(spec);const c=next.tables[0].columns.find(c=>c.name===note.column);if(c){c.role='learned';delete c.formula;c.provenance={origin:'profiled',detail:'Candidate formula rejected; learn observed values',confirmed:false};void onValidate(next);}}}>Learn instead</button></div><span className="small">{spec.tables[0].columns.find(c=>c.name===note.column)?.role==='learned'?'Rejected':spec.tables[0].columns.find(c=>c.name===note.column)?.provenance?.confirmed?'Accepted':'Unconfirmed'}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -578,7 +574,7 @@ function ReviewView({
           title="Suggested fix"
           sub={`${fixes.length} column${fixes.length > 1 ? "s" : ""} this engine cannot model`}
           actions={
-            <button className="primary" disabled={applying} onClick={() => void applyFixes()}>
+            <button className="primary" disabled={applying || editorDirty} onClick={() => void applyFixes()}>
               {applying ? "Applying…" : "Apply suggested fix"}
             </button>
           }
@@ -613,11 +609,10 @@ function ReviewView({
         </Card>
       ) : null}
 
-      {blocked ? (
-        <Card title="The specification was rejected" sub={`${errors.length} errors`}>
+      {errors.length > 0 ? (
+        <Card title="A few details need attention" sub={`${errors.length} ${errors.length===1?'issue':'issues'} to resolve`}>
           <Notice tone="critical">
-            Generation cannot start until these are resolved. The validator runs before any engine
-            does, so an impossible request fails clearly instead of producing plausible nonsense.
+            Fix these details in the editor before generating. Your design remains available to edit.
           </Notice>
           <FindingList findings={errors} />
         </Card>
@@ -677,7 +672,7 @@ function ReviewView({
 
           {table.constraints.length > 0 ? (
             <div style={{ marginTop: 14 }}>
-              <h4 style={{ marginBottom: 8 }}>Hard rules</h4>
+              <h3 style={{ marginBottom: 8 }}>Hard rules</h3>
               <div className="stack" style={{ gap: 6 }}>
                 {table.constraints.map((constraint, index) => (
                   <div key={index} className="row small">
@@ -731,7 +726,9 @@ function ReviewView({
         </Card>
       ) : null}
 
-      <Card title="Generate">
+      <Card title="Generation settings" sub="Choose the output size and how it should be created." id="generation-settings" className="generation-settings">
+        <fieldset className="generation-controls" disabled={editorDirty}>
+        <legend className="sr-only">Generation options</legend>
         <div className="grid grid-3" style={{ marginBottom: 14 }}>
           <label className="stack" style={{ gap: 5 }}>
             <span className="stat-label">Engine</span>
@@ -815,11 +812,12 @@ function ReviewView({
           <label>How should real test records be held out?<select value={spec.evaluation.split??'random'} onChange={e=>void onValidate({...spec,evaluation:{...spec.evaluation,split:e.target.value}})}><option value="random">Random records</option><option value="group">Entire entities (such as employees)</option><option value="time">Latest records</option></select></label>
           {spec.evaluation.split&&spec.evaluation.split!=='random'&&<label>Split column<select value={spec.evaluation.split_column??''} onChange={e=>void onValidate({...spec,evaluation:{...spec.evaluation,split_column:e.target.value}})}><option value="">Choose a column</option>{spec.tables[0].columns.map(c=><option key={c.name}>{c.name}</option>)}</select></label>}
         </div>}
-        <div className="row">
+        </fieldset>
+        <div className="generation-actions">
           <button className="primary" disabled={blocked || starting} onClick={start}>
             {starting ? "Starting…" : "Generate dataset"}
           </button>
-          {blocked ? <span className="small muted">Resolve the errors above first.</span> : null}
+          {blocked ? <span className="small secondary">{editorDirty?'Apply or discard your editor changes first.':'Resolve the validation issues above first.'}</span> : null}
           {validation?.open_assumptions?.length ? (
             <span className="small muted">
               {validation.open_assumptions.length} unconfirmed assumptions will be recorded in the
@@ -841,6 +839,7 @@ const TIMEZONE_OFFSETS = [-8, -5, -3, 0, 1, 2, 3, 4, 5.5, 7, 8, 9, 10];
 
 const ROLE_EXPLANATION: Record<string, string> = {
   identifier: "Regenerated; never copied from the source",
+  foreign_key: "Assigned from a declared parent relationship",
   learned: "A generator may model this column",
   rule: "Sampled from a declared rule",
   derived: "Computed from other columns after generation",
@@ -849,6 +848,22 @@ const ROLE_EXPLANATION: Record<string, string> = {
 };
 
 /* --------------------------------------------------------------- generate */
+
+// Matches each engine's own capabilities().label so the generating screen never
+// invents a name the engine did not declare.
+const ENGINE_LABELS: Record<string, string> = {
+  rules: "Rules + Faker",
+  relational_rules: "Relational (parent-first rules)",
+  arf: "Adversarial Random Forest",
+  independent: "Independent columns (baseline)",
+};
+
+function formatElapsed(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
 
 function GenerateView({
   jobId,
@@ -862,55 +877,94 @@ function GenerateView({
   const [job, setJob] = useState<Job | null>(null);
   const [pollError,setPollError]=useState('');
   const [retry,setRetry]=useState(0);
-  const doneRef=useRef(onDone);doneRef.current=onDone;
+  const [elapsedMs,setElapsedMs]=useState(0);
+  const doneRef=useRef(onDone);
+  useEffect(() => { doneRef.current = onDone; }, [onDone]);
 
   useEffect(() => {
-    let failures=0;const started=Date.now();setPollError('');
+    let failures=0;const started=Date.now();setPollError('');setElapsedMs(0);
     let cancelled = false;
+    // A visible, ticking clock is what tells a person a slow job is still alive
+    // rather than frozen — a bare spinner looks identical whether it has been
+    // running for two seconds or two minutes.
+    const clock = window.setInterval(() => { if (!cancelled) setElapsedMs(Date.now() - started); }, 1000);
     const tick = async () => {
       try {
         const next = await api.job(jobId);
         if (cancelled) return;
+        failures = 0;
+        setPollError('');
         setJob(next);
         if (next.status === "completed" || next.status === "failed" || next.status === "rejected") {
           doneRef.current(next);
           return;
         }
       } catch {
-        failures++; if(failures>=5){setPollError("Connection lost. Your job may still be running. Retry to reconnect.");return;}
+        // A slow-but-succeeding job and a genuinely lost connection need different
+        // responses, so they are not collapsed into one error path: this counts
+        // only real fetch failures, five in a row, before saying the connection
+        // itself is the problem.
+        failures++; if(failures>=5){setPollError("Connection lost. Your job may still be running in the background. Reconnect to check its status.");return;}
       }
-      if(Date.now()-started>120000){setPollError("This job is taking longer than expected. You can reconnect to check its status.");return;}
+      // No time-based cutoff here. The adversarial random forest genuinely takes
+      // minutes on tables with tens of thousands of rows — measured up to several
+      // minutes when its internal retry ladder needs more than one attempt — so a
+      // fixed timeout on an otherwise healthy, still-succeeding poll was reporting
+      // a hang that was not actually happening. Polling continues for as long as
+      // the server keeps answering; only real connection loss stops it.
       if (!cancelled) window.setTimeout(tick, 700);
     };
     void tick();
     return () => {
       cancelled = true;
+      window.clearInterval(clock);
     };
   }, [jobId, retry]);
 
   const status = job?.status ?? "queued";
+  const active = status === "queued" || status === "running";
+  const slow = active && elapsedMs > 45000;
 
   return (
     <>
       <div className="page-head">
-        <h1>Generating</h1>
+        <div className="eyebrow">Step 03 · Create your records</div><h1>Generating your dataset</h1>
         <p>
           Generation runs as a background job. Learned engines take tens of seconds on a few
-          thousand rows.
+          thousand rows, and several minutes on tens of thousands.
         </p>
       </div>
 
       {pollError&&<Notice tone="warning" title="Status unavailable">{pollError}<button onClick={()=>setRetry(n=>n+1)}>Reconnect</button></Notice>}
       <Card>
         <div className="row" style={{ gap: 12 }}>
-          {status === "queued" || status === "running" ? <Spinner /> : null}
-          <div>
+          {active ? <Spinner /> : null}
+          <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 600 }}>
               {status === "running" ? job?.progress ?? "working" : status}
             </div>
             <div className="small muted mono">job {jobId}</div>
+            {(job?.engine || job?.requested_rows) ? (
+              <div className="small muted">
+                {job?.engine ? ENGINE_LABELS[job.engine] ?? job.engine : "engine"}
+                {job?.requested_rows ? ` · ${job.requested_rows.toLocaleString()} rows requested` : ""}
+              </div>
+            ) : null}
           </div>
+          {active ? (
+            <div className="small muted mono" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+              {formatElapsed(elapsedMs)} elapsed
+            </div>
+          ) : null}
         </div>
+
+        {slow ? (
+          <Notice tone="accent" title="Still working">
+            This is expected for a learned engine on a table this size — it has not stalled.
+            Polling continues in the background regardless of how long generation takes; the
+            elapsed time above is the only thing to watch.
+          </Notice>
+        ) : null}
 
         {status === "rejected" ? (
           <div style={{ marginTop: 16 }}>

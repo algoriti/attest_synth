@@ -5,7 +5,7 @@
  * a third of its distributions were invented, or that its utility barely beats random
  * sampling. Everything that qualifies the data is shown before the download link.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -33,13 +33,19 @@ export function ReportView({
 }) {
   const { summary, evaluation } = report;
   const [activeTable,setActiveTable]=useState(report.tables[0]?.table??'');
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const warnings = report.validation.warnings ?? [];
+
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
 
   return (
     <>
       <div className="page-head">
+        <div className="eyebrow">Step 04 · Inspect & export</div>
         <div className="row">
-          <h1>Evidence report</h1>
+          <h1 ref={headingRef} tabIndex={-1}>Evidence report</h1>
           <Badge tone={summary.all_constraints_passed ? "good" : "critical"}>
             {summary.all_constraints_passed ? "Structural checks passed" : "Output checks failed"}
           </Badge>
@@ -84,20 +90,21 @@ export function ReportView({
       ) : null}
 
       <Card title="Checks and results" sub="Structural validity, similarity and usefulness answer different questions.">
-        {evaluation.checks&&<div className="row">{Object.entries(evaluation.checks).map(([name,result])=><div key={name}><strong>{name.replaceAll('_',' ')}</strong> <Badge tone={result.status==='failed'?'critical':result.status==='skipped'?'warning':'good'}>{result.status}</Badge>{result.reason&&<p className="small">{result.reason}</p>}</div>)}</div>}
+        {evaluation.checks&&<div className="check-grid">{Object.entries(evaluation.checks).map(([name,result])=><div className="check-item" key={name}><strong>{name.replaceAll('_',' ')}</strong> <Badge tone={result.status==='failed'?'critical':result.status==='skipped'?'warning':result.status==='passed'?'good':'accent'}>{result.status}</Badge>{result.reason&&<p className="small">{result.reason}</p>}</div>)}</div>}
         {evaluation.relationship_checks?.filter(c=>!c.passed).map(c=><Notice key={c.relationship} tone="critical">{c.relationship}: {c.invalid_keys} invalid keys; {c.parents_outside_bounds} parents outside their child-count limits.</Notice>)}
+        {evaluation.cross_table_checks?.map(c=><Notice key={c.relationship} tone={c.passed?'good':'critical'}>{c.relationship}: {c.failing_rows} failures; {c.skipped_rows} skipped.</Notice>)}
+        {evaluation.aggregates?.map(c=><p key={`${c.table}.${c.column}`} className="small">{c.table}.{c.column}: {c.operation} from {c.source}. Uses {c.denominator}.</p>)}
         {evaluation.split&&<Notice tone="accent" title="Utility evaluation split">{evaluation.split.strategy}: {evaluation.split.train_rows} training rows; {evaluation.split.test_rows} test rows. {evaluation.split.note}</Notice>}
       </Card>
-      <nav className="row" aria-label="Result tables" style={{marginBottom:16}}>{report.tables.map(t=><button key={t.table} aria-pressed={activeTable===t.table} onClick={()=>setActiveTable(t.table)}>{t.table} ({t.generated_rows.toLocaleString()})</button>)}<button aria-pressed={activeTable==='*'} onClick={()=>setActiveTable('*')}>Show all tables</button></nav>
+      <nav className="result-tabs" aria-label="Result tables">{report.tables.map(t=><button key={t.table} aria-pressed={activeTable===t.table} onClick={()=>setActiveTable(t.table)}>{t.table} ({t.generated_rows.toLocaleString()})</button>)}<button aria-pressed={activeTable==='*'} onClick={()=>setActiveTable('*')}>Show all tables</button></nav>
+      <p className="sr-only" role="status">{activeTable==='*'?'Showing all result tables':`Showing result table ${activeTable}`}</p>
       {report.tables.filter(t=>activeTable==='*'||activeTable===t.table).map((table) => (
         <Card
           key={table.table}
           title={table.table}
           sub={`${table.generated_rows.toLocaleString()} rows · ${table.elapsed_seconds.toFixed(2)}s`}
           actions={
-            <a href={api.downloadUrl(jobId, table.table)} download>
-              <button className="primary">Download CSV</button>
-            </a>
+            <a className="button-link primary" href={api.downloadUrl(jobId, table.table)} download>Download CSV <span aria-hidden="true">↓</span></a>
           }
         >
           {!table.complete ? (
@@ -115,11 +122,11 @@ export function ReportView({
 
           <div className="grid grid-2">
             <div>
-              <h4 style={{ marginBottom: 8 }}>Declared constraints</h4>
+              <h3 style={{ marginBottom: 8 }}>Declared constraints</h3>
               {table.constraints.length === 0 ? (
                 <p className="small muted">No constraints declared for this table.</p>
               ) : (
-                <div className="table-wrap">
+                <details className="report-detail" open={table.constraints.some(c=>!c.passed)}><summary>Review {table.constraints.length} checks{table.constraints.every(c=>c.passed)?' · all passed':' · needs attention'}</summary><div className="table-wrap" tabIndex={0} role="region" aria-label="Declared constraint results">
                   <table>
                     <thead>
                       <tr>
@@ -145,19 +152,19 @@ export function ReportView({
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </div></details>
               )}
             </div>
 
             <div>
-              <h4 style={{ marginBottom: 8 }}>Repairs applied after generation</h4>
+              <h3 style={{ marginBottom: 8 }}>Repairs applied after generation</h3>
               <RepairPanel table={table} />
             </div>
           </div>
 
           {table.derived_columns.length > 0 ? (
             <div style={{ marginTop: 16 }}>
-              <h4 style={{ marginBottom: 8 }}>Computed, not generated</h4>
+              <h3 style={{ marginBottom: 8 }}>Computed, not generated</h3>
               <div className="table-wrap">
                 <table>
                   <thead>
@@ -187,7 +194,7 @@ export function ReportView({
 
           {previews[table.table] ? (
             <div style={{ marginTop: 16 }}>
-              <h4 style={{ marginBottom: 8 }}>Preview</h4>
+              <h3 style={{ marginBottom: 8 }}>Preview</h3>
               <DataPreview preview={previews[table.table]} />
             </div>
           ) : null}
@@ -212,7 +219,7 @@ export function ReportView({
             Each row below is a claim about the world that was invented or proposed rather than
             measured. A model trained on this data learns these assumptions as if they were facts.
           </Notice>
-          <div className="table-wrap">
+          <details className="report-detail"><summary>Review {report.assumptions.length} unconfirmed assumptions</summary><div className="table-wrap assumptions-table" tabIndex={0} role="region" aria-label="Unconfirmed assumptions">
             <table>
               <thead>
                 <tr>
@@ -235,7 +242,7 @@ export function ReportView({
                 ))}
               </tbody>
             </table>
-          </div>
+          </div></details>
         </Card>
       ) : null}
 
@@ -249,12 +256,8 @@ export function ReportView({
           {report.reproduction.note}
         </p>
         <div className="row" style={{ marginTop: 14 }}>
-          <a href={api.reportUrl(jobId)} download>
-            <button>Download full report (JSON)</button>
-          </a>
-          <a href={api.specUrl(jobId)} download>
-            <button>Download specification (JSON)</button>
-          </a>
+          <a className="button-link" href={api.reportUrl(jobId)} download>Download full report (JSON)</a>
+          <a className="button-link" href={api.specUrl(jobId)} download>Download specification (JSON)</a>
           <button className="ghost" onClick={onRestart}>
             Start another dataset
           </button>
@@ -267,7 +270,7 @@ export function ReportView({
 function PrivacyPanel({ report }: { report: EvidenceReport }) {
   return (
     <Card title="Privacy">
-      <Notice tone="critical" title="No privacy guarantee">
+      <Notice tone="warning" title="No privacy guarantee">
         {report.privacy.statement}
       </Notice>
       <div className="row small secondary">
@@ -562,7 +565,7 @@ function RelationalPanel({
 
       {cardinality.length > 0 ? (
         <>
-          <h4 style={{ marginBottom: 8 }}>Children per parent</h4>
+          <h3 style={{ marginBottom: 8 }}>Children per parent</h3>
           <div className="table-wrap">
             <table>
               <thead>
