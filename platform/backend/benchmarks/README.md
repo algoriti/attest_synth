@@ -21,3 +21,9 @@ Reproduce from the repository root:
 ```
 
 [Machine-readable results](results/summary.json). The bank, student and wine public-data sources and acquisition details remain documented in `literature-review/benchmarks/data/README.md`.
+
+## Hosted assistant requirement check
+
+`check_employee_assistant.py` sends the saved public scenario in `prompts/employee_behavioral_500_12_months.txt` to the configured Groq endpoint, validates the proposal, generates it, and records requirement-level evidence. The 21 September 2026 run completed in 25.747 seconds: 500 employees; all six supported requested entities; no missing requested fields or extra entities; five relationship-owned foreign keys; 130,795 generated rows; and all final constraints passing. Monthly employee-period summaries were disclosed and omitted because the current engine cannot calculate them across several activity tables. They were not replaced with random indicators.
+
+The credential-free machine result is [assistant_employee_behavioral_check.json](results/assistant_employee_behavioral_check.json). Model output remains stochastic, so this is a regression case and observed result rather than a guarantee that every prompt will have the same coverage.

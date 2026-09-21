@@ -1,5 +1,5 @@
 {
-  "generatedUtc": "2026-09-21T08:44:37.608Z",
+  "generatedUtc": "2026-09-21T10:36:24.809Z",
   "tool": "axe-core 4.10.3 and Chrome accessibility tree",
   "scope": [
     "Start screen",
@@ -23,7 +23,7 @@
   "audits": [
     {
       "name": "Start screen",
-      "url": "http://127.0.0.1:8772/",
+      "url": "http://127.0.0.1:8770/",
       "violations": [],
       "incomplete": [
         {
@@ -150,7 +150,7 @@
     },
     {
       "name": "Guided editor",
-      "url": "http://127.0.0.1:8772/",
+      "url": "http://127.0.0.1:8770/",
       "violations": [],
       "incomplete": [
         {
@@ -297,7 +297,7 @@
     },
     {
       "name": "Recoverable JSON error",
-      "url": "http://127.0.0.1:8772/",
+      "url": "http://127.0.0.1:8770/",
       "violations": [],
       "incomplete": [
         {
@@ -431,7 +431,7 @@
     },
     {
       "name": "Single-table evidence report",
-      "url": "http://127.0.0.1:8772/",
+      "url": "http://127.0.0.1:8770/",
       "violations": [],
       "incomplete": [
         {
@@ -569,7 +569,7 @@
     },
     {
       "name": "Relational guided editor",
-      "url": "http://127.0.0.1:8772/",
+      "url": "http://127.0.0.1:8770/",
       "violations": [],
       "incomplete": [
         {
@@ -667,6 +667,10 @@
         {
           "role": "button",
           "name": "Apply and validate changes"
+        },
+        {
+          "role": "heading",
+          "name": "Warnings"
         },
         {
           "role": "heading",
@@ -1096,7 +1100,7 @@
     },
     {
       "name": "Relational evidence report with details expanded",
-      "url": "http://127.0.0.1:8772/",
+      "url": "http://127.0.0.1:8770/",
       "violations": [],
       "incomplete": [
         {
@@ -1239,6 +1243,10 @@
         },
         {
           "role": "heading",
+          "name": "Validation warnings"
+        },
+        {
+          "role": "heading",
           "name": "Checks and results"
         },
         {
@@ -1285,7 +1293,7 @@
     },
     {
       "name": "Uploaded-data review with suggested fix",
-      "url": "http://127.0.0.1:8772/",
+      "url": "http://127.0.0.1:8770/",
       "violations": [],
       "incomplete": [
         {

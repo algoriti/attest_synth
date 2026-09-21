@@ -451,6 +451,10 @@ summary { cursor: pointer; padding: 10px 0; font-weight: 600; }
 .assistant-layout p { max-width: 45ch; }
 .assistant-actions { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .assistant-actions .primary { flex-shrink: 0; }
+.download-control { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.download-success { color: var(--good); }
+.download-error { color: var(--critical); }
+.error-recovery { max-width: 760px; margin: 80px auto; padding: 24px; }
 .engine-details { margin-top: 28px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 6px 0; }
 .engine-details > summary { padding: 14px 0; }
 .engine-details > summary > span { margin-left: 16px; font-weight: 400; }

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Component, useCallback, useEffect, useMemo, useRef, useState, type ErrorInfo, type ReactNode } from "react";
 import {
   api,
   type AssistantReview,
@@ -14,11 +14,21 @@ import {
   type ValidationResult,
 } from "./api";
 import { Badge, Card, DataPreview, FindingList, Notice, RoleChip, Spinner } from "./components";
-const ReportView = lazy(() => import("./ReportView").then(module => ({ default: module.ReportView })));
+import { ReportView } from "./ReportView";
 import "./theme.css";
 import { SpecEditor, blankSpec } from "./SpecEditor";
 
 type Step = "start" | "review" | "generate" | "report";
+
+class ScreenErrorBoundary extends Component<{children:ReactNode},{error:string}> {
+  state={error:''};
+  static getDerivedStateFromError(error:unknown){return {error:String(error)};}
+  componentDidCatch(error:unknown,info:ErrorInfo){console.error('Screen render failed',error,info.componentStack);}
+  render(){
+    if(this.state.error)return <main id="main-content" className="error-recovery" tabIndex={-1}><Notice tone="critical" title="This screen could not be displayed"><p>Your dataset job is still available on the server. Reload the workspace to fetch the screen again.</p><p className="small mono">{this.state.error}</p><button className="primary" onClick={()=>window.location.reload()}>Reload workspace</button></Notice></main>;
+    return this.props.children;
+  }
+}
 
 const STEPS: { id: Step; label: string }[] = [
   { id: "start", label: "Start" },
@@ -28,6 +38,10 @@ const STEPS: { id: Step; label: string }[] = [
 ];
 
 export default function App() {
+  return <ScreenErrorBoundary><Workspace /></ScreenErrorBoundary>;
+}
+
+function Workspace() {
   const [step, setStep] = useState<Step>("start");
   const [engines, setEngines] = useState<Engine[]>([]);
   const [theme, setTheme] = useState<"light" | "dark">(
@@ -181,14 +195,18 @@ export default function App() {
         )}
 
         {step === "report" && job?.report && (
-          <Suspense fallback={<div className="row" role="status"><Spinner /> Preparing your evidence report…</div>}>
           <ReportView
             report={job.report as EvidenceReport}
             previews={job.previews ?? {}}
             jobId={job.id}
             onRestart={reset}
           />
-          </Suspense>
+        )}
+        {step === "report" && job && !job.report && (
+          <Notice tone="critical" title="The completed result could not be loaded">
+            The job finished, but its report data is missing. Return to the job screen to fetch it again.
+            <button style={{ marginLeft: 10 }} onClick={()=>setStep("generate")}>Reload result</button>
+          </Notice>
         )}
       </main>
     </div>
@@ -497,6 +515,7 @@ function ReviewView({
           </Notice>)}
           {assistantReview.unsupported_requests.map((message,index)=><Notice key={index} tone="warning" title="Requested calculation is outside the current engine">{message}</Notice>)}
           {assistantReview.omitted_tables.length>0&&<p className="small secondary">Omitted rather than fabricated: <code>{assistantReview.omitted_tables.join(', ')}</code>.</p>}
+          {(assistantReview.automatic_reconciliations?.length??0)>0&&<details><summary>Platform reconciliation ({assistantReview.automatic_reconciliations.length})</summary><ul>{assistantReview.automatic_reconciliations.map((message,index)=><li key={index}>{message}</li>)}</ul></details>}
           {assistantReview.correction_attempted&&<p className="small secondary">The first model response failed platform checks. One bounded correction was applied and this is the validated proposal.</p>}
         </Card>
       )}

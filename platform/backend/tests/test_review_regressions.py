@@ -231,7 +231,8 @@ def test_hosted_assistant_repairs_bad_json_once(monkeypatch):
     result=assistant.propose('Create a teaching dataset.')
     assert result['review']['correction_attempted']
     assert len(requests)==2
-    assert len(requests[1]['messages'])==4
+    assert len(requests[1]['messages'])==3
+    assert all(message['role']!='assistant' for message in requests[1]['messages'])
 
 
 def test_hosted_assistant_reports_failure_after_one_bad_json_repair(monkeypatch):
@@ -239,7 +240,7 @@ def test_hosted_assistant_reports_failure_after_one_bad_json_repair(monkeypatch)
     from io import BytesIO
     monkeypatch.setenv('SYNTHETIC_LLM_API_KEY','test-only')
     monkeypatch.setattr(assistant.urllib.request,'urlopen',lambda *a,**kw:BytesIO(b'{"choices":[{"message":{"content":"not JSON"}}]}'))
-    with pytest.raises(ValueError,match='after one correction attempt.*Invalid JSON'):
+    with pytest.raises(ValueError,match="first proposal was not executable.*JSONDecodeError.*after one correction attempt"):
         assistant.propose('Create a teaching dataset.')
 
 
@@ -259,7 +260,7 @@ def test_hosted_assistant_preserves_explicit_rows_and_omits_fake_period_summary(
             {'name':'monthly_performance_summaries','rows':100,'primary_key':'summary_id','columns':[
                 {'name':'summary_id','type':'uuid','role':'identifier'},
                 {'name':'employee_id','type':'string','role':'foreign_key'},
-                {'name':'attendance_rate','type':'number','role':'rule','rule':{'kind':'number_range','start':0,'end':1}}]},
+                {'name':'attendance_rate','type':'number','role':'derived','formula':{'op':'/','args':[{'const':1},{'const':2}]}}]},
         ],
         'relationships':[
             {'parent_table':'employees','parent_key':'employee_id','child_table':'attendance','child_key':'employee_id','child_count_min':1,'child_count_max':5},
@@ -278,6 +279,36 @@ def test_hosted_assistant_preserves_explicit_rows_and_omits_fake_period_summary(
     assert result['review']['explicit_row_requirements'][0]['assistant_rows']==100
     assert result['review']['omitted_tables']==['monthly_performance_summaries']
     assert result['review']['unsupported_requests']
+
+
+def test_hosted_assistant_reconciles_relationship_owned_keys_without_second_call(monkeypatch):
+    from synthetic_platform import assistant
+    from io import BytesIO
+    monkeypatch.setenv('SYNTHETIC_LLM_API_KEY','test-only')
+    proposal={
+        'name':'orders','mode':'relational_rules','purpose':'software_testing','engine':'relational_rules',
+        'tables':[
+            {'name':'customers','rows':100,'primary_key':'customer_id','columns':[
+                {'name':'customer_id','type':'integer','role':'identifier'}]},
+            {'name':'orders','rows':100,'primary_key':'order_id','columns':[
+                {'name':'order_id','type':'integer','role':'identifier'},
+                {'name':'customer_id','type':'integer','role':'rule','rule':{'kind':'integer_range','start':1,'end':100}}]},
+        ],
+        'relationships':[{'parent_table':'customers','parent_key':'customer_id','child_table':'orders','child_key':'customer_id','child_count_min':1,'child_count_max':5}],
+    }
+    response=json.dumps({'choices':[{'message':{'content':json.dumps(proposal)},'finish_reason':'stop'}]}).encode()
+    calls=[]
+    def fake_open(*args,**kwargs):
+        calls.append(1);return BytesIO(response)
+    monkeypatch.setattr(assistant.urllib.request,'urlopen',fake_open)
+    result=assistant.propose('Create approximately 500 synthetic customers with linked orders.')
+    customers,orders=result['spec']['tables']
+    assert customers['rows']==500
+    assert orders['rows'] is None
+    foreign_key=next(column for column in orders['columns'] if column['name']=='customer_id')
+    assert foreign_key['role']=='foreign_key' and foreign_key['rule'] is None
+    assert len(calls)==1
+    assert result['review']['automatic_reconciliations']
 
 
 def test_completed_job_is_http_serializable(tmp_path,monkeypatch):

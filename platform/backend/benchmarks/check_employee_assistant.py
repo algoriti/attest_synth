@@ -22,7 +22,7 @@ OUTPUT = HERE / "results" / "assistant_employee_behavioral_check.json"
 REQUESTED_FIELDS = {
     "employees": {"employee_id", "department", "role", "grade", "employment_status", "hire_date"},
     "attendance": {"attendance_date", "time_in", "time_out", "lateness_status", "overtime_hours", "attendance_status"},
-    "projects": {"complexity", "priority"},
+    "projects": {"project_complexity", "priority"},
     "project_assignments": {"assigned_date", "deadline", "completion_date", "assignment_status", "contribution_percentage"},
     "tasks": {"assigned_date", "deadline", "completion_date", "complexity", "status", "quality_score", "rework_count"},
     "reports": {"required_date", "due_date", "submission_date", "submission_status", "quality_score"},
@@ -34,10 +34,10 @@ def _normalized(value: str) -> str:
 
 
 started = time.perf_counter()
+answer = None
 try:
     answer = propose(PROMPT.read_text())
     spec = SyntheticDataSpec.model_validate(answer["spec"])
-    generated = run(spec)
     tables = {_normalized(table.name): table for table in spec.tables}
     requested_entities = set(REQUESTED_FIELDS)
     missing_entities = sorted(requested_entities - set(tables))
@@ -62,7 +62,7 @@ try:
     report = {
         "model": configuration()["model"],
         "provider": "Groq",
-        "status": "completed",
+        "status": "proposal_completed",
         "seconds": round(time.perf_counter() - started, 3),
         "requirement_checks": {
             "employees_requested": 500,
@@ -81,11 +81,22 @@ try:
             "correction_attempted": answer["review"]["correction_attempted"],
         },
         "proposal_review": answer["review"],
-        "generated_summary": generated["report"]["summary"],
-        "generated_rows": {name: len(frame) for name, frame in generated["frames"].items()},
         "data_sent": "Prompt fixture and specification JSON schema only; no uploaded or private records.",
         "spec": answer["spec"],
     }
+    try:
+        generated = run(spec)
+        report["status"] = (
+            "completed" if generated["report"]["summary"]["all_constraints_passed"]
+            else "evidence_failed"
+        )
+        report["generated_summary"] = generated["report"]["summary"]
+        report["generated_rows"] = {
+            name: len(frame) for name, frame in generated["frames"].items()
+        }
+    except Exception as generation_error:
+        report["status"] = "generation_failed"
+        report["generation_error"] = str(generation_error)
 except Exception as exc:
     report = {
         "model": configuration()["model"],
@@ -98,5 +109,5 @@ except Exception as exc:
 
 OUTPUT.write_text(json.dumps(report, indent=2, default=str) + "\n")
 print(json.dumps({key: value for key, value in report.items() if key != "spec"}, indent=2))
-if report["status"] == "failed":
+if report["status"] != "completed":
     sys.exit(1)

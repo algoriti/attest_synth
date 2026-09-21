@@ -124,6 +124,7 @@ export interface AssistantReview {
   }[];
   unsupported_requests: string[];
   omitted_tables: string[];
+  automatic_reconciliations: string[];
 }
 
 export interface Relationship {

@@ -133,6 +133,7 @@ def vocabulary() -> dict:
 
 _ROLE_HELP = {
     "identifier": "Regenerated, never copied from the source.",
+    "foreign_key": "Assigned from a declared parent relationship.",
     "learned": "A generator may model this column.",
     "rule": "Sampled from an explicit declared rule.",
     "derived": "Computed from other columns after generation.",

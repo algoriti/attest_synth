@@ -104,7 +104,7 @@ export function ReportView({
           title={table.table}
           sub={`${table.generated_rows.toLocaleString()} rows · ${table.elapsed_seconds.toFixed(2)}s`}
           actions={
-            <a className="button-link primary" href={api.downloadUrl(jobId, table.table)} download>Download CSV <span aria-hidden="true">↓</span></a>
+            <DownloadButton url={api.downloadUrl(jobId, table.table)} filename={`${table.table}.csv`} label="Download CSV" primary />
           }
         >
           {!table.complete ? (
@@ -256,8 +256,8 @@ export function ReportView({
           {report.reproduction.note}
         </p>
         <div className="row" style={{ marginTop: 14 }}>
-          <a className="button-link" href={api.reportUrl(jobId)} download>Download full report (JSON)</a>
-          <a className="button-link" href={api.specUrl(jobId)} download>Download specification (JSON)</a>
+          <DownloadButton url={api.reportUrl(jobId)} filename="evidence_report.json" label="Download full report (JSON)" />
+          <DownloadButton url={api.specUrl(jobId)} filename="specification.json" label="Download specification (JSON)" />
           <button className="ghost" onClick={onRestart}>
             Start another dataset
           </button>
@@ -265,6 +265,31 @@ export function ReportView({
       </Card>
     </>
   );
+}
+
+function DownloadButton({url,filename,label,primary=false}:{url:string;filename:string;label:string;primary?:boolean}) {
+  const [state,setState]=useState<'idle'|'downloading'|'done'|'error'>('idle');
+  const [message,setMessage]=useState('');
+  const download=async()=>{
+    setState('downloading');setMessage('');
+    try {
+      const response=await fetch(url);
+      if(!response.ok){
+        let detail=`Download failed (${response.status}).`;
+        try { const body=await response.json();if(body.detail)detail=String(body.detail); } catch { /* keep status */ }
+        throw new Error(detail);
+      }
+      const blob=await response.blob();
+      if(blob.size===0)throw new Error('The downloaded file was empty.');
+      const objectUrl=URL.createObjectURL(blob);const anchor=document.createElement('a');
+      anchor.href=objectUrl;anchor.download=filename;document.body.appendChild(anchor);anchor.click();anchor.remove();
+      window.setTimeout(()=>URL.revokeObjectURL(objectUrl),1000);
+      setState('done');setMessage(`${filename} downloaded (${blob.size.toLocaleString()} bytes).`);
+    } catch(error) {
+      setState('error');setMessage(String(error).replace(/^Error:\s*/,''));
+    }
+  };
+  return <span className="download-control"><button className={primary?'primary':undefined} disabled={state==='downloading'} onClick={()=>void download()}>{state==='downloading'?'Preparing…':label} <span aria-hidden="true">↓</span></button>{message&&<span className={`small ${state==='error'?'download-error':'download-success'}`} role="status">{message}</span>}</span>;
 }
 
 function PrivacyPanel({ report }: { report: EvidenceReport }) {

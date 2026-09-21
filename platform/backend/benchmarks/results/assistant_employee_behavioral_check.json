@@ -1,8 +1,2077 @@
 {
   "model": "openai/gpt-oss-120b",
   "provider": "Groq",
-  "status": "failed",
-  "seconds": 64.254,
-  "error": "Model provider returned HTTP 400. Provider gateway rejected the request.",
-  "data_sent": "Prompt fixture and specification JSON schema only; no uploaded or private records."
+  "status": "completed",
+  "seconds": 25.747,
+  "requirement_checks": {
+    "employees_requested": 500,
+    "employees_specified": 500,
+    "requested_entities_present": true,
+    "missing_entities": [],
+    "extra_entities": [],
+    "missing_requested_fields": {},
+    "relationship_count": 5,
+    "relationship_foreign_keys_are_owned": true,
+    "bad_foreign_keys": [],
+    "unsupported_period_summary_disclosed": true,
+    "period_summary_omitted_instead_of_randomized": true,
+    "correction_attempted": false
+  },
+  "proposal_review": {
+    "correction_attempted": false,
+    "explicit_row_requirements": [
+      {
+        "table": "employees",
+        "requested_rows": 500,
+        "qualifier": "approximately",
+        "assistant_rows": 500,
+        "changed": false
+      }
+    ],
+    "unsupported_requests": [
+      "Monthly or other entity-period summaries calculated across several activity tables are not supported by the current engine. They were omitted instead of being filled with unrelated random values. Generate the base event tables first; period summaries remain a separate, explicit implementation step."
+    ],
+    "omitted_tables": [],
+    "automatic_reconciliations": [
+      "employees compound uniqueness on (employee_id) was omitted because this engine only constructs compound-unique junction pairs; the generated primary key remains unique.",
+      "attendance compound uniqueness on (employee_id, attendance_date) was omitted because this engine only constructs compound-unique junction pairs; the generated primary key remains unique.",
+      "attendance.time_out is derived as 8 hours after time_in so the declared date order is enforced. Review this synthetic timing assumption.",
+      "projects compound uniqueness on (project_id) was omitted because this engine only constructs compound-unique junction pairs; the generated primary key remains unique.",
+      "projects.end_date is derived as 1 days after start_date so the declared date order is enforced. Review this synthetic timing assumption.",
+      "project_assignments.deadline is derived as 30 days after assigned_date so the declared date order is enforced. Review this synthetic timing assumption.",
+      "project_assignments.completion_date is derived as 30 days after assigned_date so the declared date order is enforced. Review this synthetic timing assumption.",
+      "tasks compound uniqueness on (task_id) was omitted because this engine only constructs compound-unique junction pairs; the generated primary key remains unique.",
+      "tasks.deadline is derived as 30 days after assigned_date so the declared date order is enforced. Review this synthetic timing assumption.",
+      "tasks.completion_date is derived as 30 days after assigned_date so the declared date order is enforced. Review this synthetic timing assumption.",
+      "reports compound uniqueness on (report_id) was omitted because this engine only constructs compound-unique junction pairs; the generated primary key remains unique.",
+      "reports.due_date is derived as 7 days after required_date so the declared date order is enforced. Review this synthetic timing assumption."
+    ]
+  },
+  "data_sent": "Prompt fixture and specification JSON schema only; no uploaded or private records.",
+  "spec": {
+    "spec_version": "2.0",
+    "name": "employee_behavior_dataset",
+    "mode": "relational_rules",
+    "purpose": "ml_development",
+    "description": "",
+    "engine": "relational_rules",
+    "seed": 2026,
+    "tables": [
+      {
+        "name": "employees",
+        "rows": 500,
+        "primary_key": "employee_id",
+        "unique_keys": [],
+        "columns": [
+          {
+            "name": "employee_id",
+            "type": "uuid",
+            "role": "identifier",
+            "description": "Unique employee identifier",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'employees.employee_id'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "department",
+            "type": "category",
+            "role": "rule",
+            "description": "Department of employee",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "choice",
+              "provider": null,
+              "prefix": "",
+              "start": null,
+              "end": null,
+              "values": [
+                "HR",
+                "Finance",
+                "Engineering",
+                "Sales",
+                "Marketing",
+                "Operations"
+              ],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'employees.department'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "role",
+            "type": "category",
+            "role": "rule",
+            "description": "Job role of employee",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "choice",
+              "provider": null,
+              "prefix": "",
+              "start": null,
+              "end": null,
+              "values": [
+                "Manager",
+                "Analyst",
+                "Developer",
+                "Tester",
+                "Support",
+                "Executive"
+              ],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'employees.role'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "grade",
+            "type": "integer",
+            "role": "rule",
+            "description": "Job grade level",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "integer_range",
+              "provider": null,
+              "prefix": "",
+              "start": 1,
+              "end": 5,
+              "values": [],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'employees.grade'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "employment_status",
+            "type": "category",
+            "role": "rule",
+            "description": "Employment status",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "choice",
+              "provider": null,
+              "prefix": "",
+              "start": null,
+              "end": null,
+              "values": [
+                "Full-time",
+                "Part-time",
+                "Contractor",
+                "Intern"
+              ],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'employees.employment_status'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "hire_date",
+            "type": "date",
+            "role": "rule",
+            "description": "Date employee was hired",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "date_range",
+              "provider": null,
+              "prefix": "",
+              "start": "2015-01-01",
+              "end": "2022-12-31",
+              "values": [],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'employees.hire_date'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          }
+        ],
+        "constraints": [],
+        "source": {
+          "kind": "none",
+          "reference": null,
+          "upload_id": null,
+          "row_count": null,
+          "sha256": null
+        }
+      },
+      {
+        "name": "attendance",
+        "rows": null,
+        "primary_key": "attendance_id",
+        "unique_keys": [],
+        "columns": [
+          {
+            "name": "attendance_id",
+            "type": "uuid",
+            "role": "identifier",
+            "description": "Attendance record ID",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'attendance.attendance_id'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "employee_id",
+            "type": "uuid",
+            "role": "foreign_key",
+            "description": "Reference to employee",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed 'attendance.employee_id' as a relationship-owned foreign key.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "attendance_date",
+            "type": "date",
+            "role": "rule",
+            "description": "Date of attendance",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "date_range",
+              "provider": null,
+              "prefix": "",
+              "start": "2023-01-01",
+              "end": "2023-12-31",
+              "values": [],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'attendance.attendance_date'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "time_in",
+            "type": "timestamp",
+            "role": "rule",
+            "description": "Clock-in time",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "timestamp_range",
+              "provider": null,
+              "prefix": "",
+              "start": "2023-01-01T08:00:00",
+              "end": "2023-12-31T10:00:00",
+              "values": [],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'attendance.time_in'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "time_out",
+            "type": "timestamp",
+            "role": "derived",
+            "description": "Clock-out time",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": {
+              "op": "add_hours",
+              "args": [
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "time_in",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                },
+                {
+                  "op": null,
+                  "args": [],
+                  "col": null,
+                  "const": 8,
+                  "tz_offset_hours": 0.0
+                }
+              ],
+              "col": null,
+              "const": null,
+              "tz_offset_hours": 0.0
+            },
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'attendance.time_out'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "lateness_status",
+            "type": "boolean",
+            "role": "rule",
+            "description": "Was employee late?",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "faker",
+              "provider": "boolean",
+              "prefix": "",
+              "start": null,
+              "end": null,
+              "values": [],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'attendance.lateness_status'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "overtime_hours",
+            "type": "number",
+            "role": "rule",
+            "description": "Overtime hours worked",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "number_range",
+              "provider": null,
+              "prefix": "",
+              "start": 0,
+              "end": 8,
+              "values": [],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'attendance.overtime_hours'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "attendance_status",
+            "type": "category",
+            "role": "rule",
+            "description": "Attendance status",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "choice",
+              "provider": null,
+              "prefix": "",
+              "start": null,
+              "end": null,
+              "values": [
+                "Present",
+                "Absent",
+                "Leave",
+                "Remote"
+              ],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'attendance.attendance_status'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "hours_worked",
+            "type": "number",
+            "role": "derived",
+            "description": "Hours worked that day",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": {
+              "op": "duration_hours",
+              "args": [
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "time_out",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                },
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "time_in",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                }
+              ],
+              "col": null,
+              "const": null,
+              "tz_offset_hours": 0.0
+            },
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'attendance.hours_worked'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          }
+        ],
+        "constraints": [
+          {
+            "operator": "less_or_equal",
+            "columns": [
+              "time_in",
+              "time_out"
+            ],
+            "values": [],
+            "minimum": null,
+            "maximum": null,
+            "tolerance": 1e-09,
+            "description": "time_in must be before or equal to time_out",
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed this constraint for 'attendance'; review its policy meaning.",
+              "reference": null,
+              "confirmed": false
+            }
+          }
+        ],
+        "source": {
+          "kind": "none",
+          "reference": null,
+          "upload_id": null,
+          "row_count": null,
+          "sha256": null
+        }
+      },
+      {
+        "name": "projects",
+        "rows": null,
+        "primary_key": "project_id",
+        "unique_keys": [],
+        "columns": [
+          {
+            "name": "project_id",
+            "type": "uuid",
+            "role": "identifier",
+            "description": "Project identifier",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'projects.project_id'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "project_complexity",
+            "type": "category",
+            "role": "rule",
+            "description": "Complexity of project",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "choice",
+              "provider": null,
+              "prefix": "",
+              "start": null,
+              "end": null,
+              "values": [
+                "Low",
+                "Medium",
+                "High",
+                "Critical"
+              ],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'projects.project_complexity'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "priority",
+            "type": "category",
+            "role": "rule",
+            "description": "Project priority",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "choice",
+              "provider": null,
+              "prefix": "",
+              "start": null,
+              "end": null,
+              "values": [
+                "Low",
+                "Medium",
+                "High"
+              ],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'projects.priority'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "start_date",
+            "type": "date",
+            "role": "rule",
+            "description": "Project start date",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "date_range",
+              "provider": null,
+              "prefix": "",
+              "start": "2023-01-01",
+              "end": "2023-12-31",
+              "values": [],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'projects.start_date'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "end_date",
+            "type": "date",
+            "role": "derived",
+            "description": "Project end date",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": {
+              "op": "add_days",
+              "args": [
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "start_date",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                },
+                {
+                  "op": null,
+                  "args": [],
+                  "col": null,
+                  "const": 1,
+                  "tz_offset_hours": 0.0
+                }
+              ],
+              "col": null,
+              "const": null,
+              "tz_offset_hours": 0.0
+            },
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'projects.end_date'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          }
+        ],
+        "constraints": [
+          {
+            "operator": "less_or_equal",
+            "columns": [
+              "start_date",
+              "end_date"
+            ],
+            "values": [],
+            "minimum": null,
+            "maximum": null,
+            "tolerance": 1e-09,
+            "description": "start_date must be before or equal to end_date",
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed this constraint for 'projects'; review its policy meaning.",
+              "reference": null,
+              "confirmed": false
+            }
+          }
+        ],
+        "source": {
+          "kind": "none",
+          "reference": null,
+          "upload_id": null,
+          "row_count": null,
+          "sha256": null
+        }
+      },
+      {
+        "name": "project_assignments",
+        "rows": null,
+        "primary_key": "assignment_id",
+        "unique_keys": [
+          [
+            "employee_id",
+            "project_id"
+          ]
+        ],
+        "columns": [
+          {
+            "name": "assignment_id",
+            "type": "uuid",
+            "role": "identifier",
+            "description": "Assignment identifier",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'project_assignments.assignment_id'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "employee_id",
+            "type": "uuid",
+            "role": "foreign_key",
+            "description": "Reference to employee",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed 'project_assignments.employee_id' as a relationship-owned foreign key.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "project_id",
+            "type": "uuid",
+            "role": "foreign_key",
+            "description": "Reference to project",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed 'project_assignments.project_id' as a relationship-owned foreign key.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "assigned_date",
+            "type": "date",
+            "role": "rule",
+            "description": "Date assigned to project",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "date_range",
+              "provider": null,
+              "prefix": "",
+              "start": "2023-01-01",
+              "end": "2023-12-31",
+              "values": [],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'project_assignments.assigned_date'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "deadline",
+            "type": "date",
+            "role": "derived",
+            "description": "Project assignment deadline",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": {
+              "op": "add_days",
+              "args": [
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "assigned_date",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                },
+                {
+                  "op": null,
+                  "args": [],
+                  "col": null,
+                  "const": 30,
+                  "tz_offset_hours": 0.0
+                }
+              ],
+              "col": null,
+              "const": null,
+              "tz_offset_hours": 0.0
+            },
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'project_assignments.deadline'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "completion_date",
+            "type": "date",
+            "role": "derived",
+            "description": "Date assignment completed",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": {
+              "op": "add_days",
+              "args": [
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "assigned_date",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                },
+                {
+                  "op": null,
+                  "args": [],
+                  "col": null,
+                  "const": 30,
+                  "tz_offset_hours": 0.0
+                }
+              ],
+              "col": null,
+              "const": null,
+              "tz_offset_hours": 0.0
+            },
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'project_assignments.completion_date'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "assignment_status",
+            "type": "category",
+            "role": "rule",
+            "description": "Status of assignment",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "choice",
+              "provider": null,
+              "prefix": "",
+              "start": null,
+              "end": null,
+              "values": [
+                "Active",
+                "Completed",
+                "Cancelled",
+                "On Hold"
+              ],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'project_assignments.assignment_status'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "contribution_percentage",
+            "type": "number",
+            "role": "rule",
+            "description": "Employee contribution % to project",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "number_range",
+              "provider": null,
+              "prefix": "",
+              "start": 0,
+              "end": 100,
+              "values": [],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'project_assignments.contribution_percentage'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "assignment_duration_days",
+            "type": "number",
+            "role": "derived",
+            "description": "Duration from assignment to completion",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": {
+              "op": "sub",
+              "args": [
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "completion_date",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                },
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "assigned_date",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                }
+              ],
+              "col": null,
+              "const": null,
+              "tz_offset_hours": 0.0
+            },
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'project_assignments.assignment_duration_days'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          }
+        ],
+        "constraints": [
+          {
+            "operator": "less_or_equal",
+            "columns": [
+              "assigned_date",
+              "deadline"
+            ],
+            "values": [],
+            "minimum": null,
+            "maximum": null,
+            "tolerance": 1e-09,
+            "description": "assigned_date must be before or equal to deadline",
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed this constraint for 'project_assignments'; review its policy meaning.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "operator": "less_or_equal",
+            "columns": [
+              "assigned_date",
+              "completion_date"
+            ],
+            "values": [],
+            "minimum": null,
+            "maximum": null,
+            "tolerance": 1e-09,
+            "description": "assigned_date must be before or equal to completion_date",
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed this constraint for 'project_assignments'; review its policy meaning.",
+              "reference": null,
+              "confirmed": false
+            }
+          }
+        ],
+        "source": {
+          "kind": "none",
+          "reference": null,
+          "upload_id": null,
+          "row_count": null,
+          "sha256": null
+        }
+      },
+      {
+        "name": "tasks",
+        "rows": null,
+        "primary_key": "task_id",
+        "unique_keys": [],
+        "columns": [
+          {
+            "name": "task_id",
+            "type": "uuid",
+            "role": "identifier",
+            "description": "Task identifier",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'tasks.task_id'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "assignment_id",
+            "type": "uuid",
+            "role": "foreign_key",
+            "description": "Reference to assignment",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed 'tasks.assignment_id' as a relationship-owned foreign key.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "assigned_date",
+            "type": "date",
+            "role": "rule",
+            "description": "Date task assigned",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "date_range",
+              "provider": null,
+              "prefix": "",
+              "start": "2023-01-01",
+              "end": "2023-12-31",
+              "values": [],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'tasks.assigned_date'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "deadline",
+            "type": "date",
+            "role": "derived",
+            "description": "Task deadline",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": {
+              "op": "add_days",
+              "args": [
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "assigned_date",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                },
+                {
+                  "op": null,
+                  "args": [],
+                  "col": null,
+                  "const": 30,
+                  "tz_offset_hours": 0.0
+                }
+              ],
+              "col": null,
+              "const": null,
+              "tz_offset_hours": 0.0
+            },
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'tasks.deadline'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "completion_date",
+            "type": "date",
+            "role": "derived",
+            "description": "Task completion date",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": {
+              "op": "add_days",
+              "args": [
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "assigned_date",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                },
+                {
+                  "op": null,
+                  "args": [],
+                  "col": null,
+                  "const": 30,
+                  "tz_offset_hours": 0.0
+                }
+              ],
+              "col": null,
+              "const": null,
+              "tz_offset_hours": 0.0
+            },
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'tasks.completion_date'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "complexity",
+            "type": "category",
+            "role": "rule",
+            "description": "Task complexity",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "choice",
+              "provider": null,
+              "prefix": "",
+              "start": null,
+              "end": null,
+              "values": [
+                "Low",
+                "Medium",
+                "High"
+              ],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'tasks.complexity'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "status",
+            "type": "category",
+            "role": "rule",
+            "description": "Task status",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "choice",
+              "provider": null,
+              "prefix": "",
+              "start": null,
+              "end": null,
+              "values": [
+                "Not Started",
+                "In Progress",
+                "Completed",
+                "Blocked"
+              ],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'tasks.status'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "quality_score",
+            "type": "number",
+            "role": "rule",
+            "description": "Quality score of task",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "number_range",
+              "provider": null,
+              "prefix": "",
+              "start": 0,
+              "end": 100,
+              "values": [],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'tasks.quality_score'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "rework_count",
+            "type": "integer",
+            "role": "rule",
+            "description": "Number of rework iterations",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "integer_range",
+              "provider": null,
+              "prefix": "",
+              "start": 0,
+              "end": 5,
+              "values": [],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'tasks.rework_count'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "task_duration_days",
+            "type": "number",
+            "role": "derived",
+            "description": "Duration from assignment to completion",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": {
+              "op": "sub",
+              "args": [
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "completion_date",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                },
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "assigned_date",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                }
+              ],
+              "col": null,
+              "const": null,
+              "tz_offset_hours": 0.0
+            },
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'tasks.task_duration_days'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "on_time",
+            "type": "boolean",
+            "role": "derived",
+            "description": "Task completed on or before deadline",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": {
+              "op": "le",
+              "args": [
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "completion_date",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                },
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "deadline",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                }
+              ],
+              "col": null,
+              "const": null,
+              "tz_offset_hours": 0.0
+            },
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'tasks.on_time'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          }
+        ],
+        "constraints": [
+          {
+            "operator": "less_or_equal",
+            "columns": [
+              "assigned_date",
+              "deadline"
+            ],
+            "values": [],
+            "minimum": null,
+            "maximum": null,
+            "tolerance": 1e-09,
+            "description": "assigned_date must be before or equal to deadline",
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed this constraint for 'tasks'; review its policy meaning.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "operator": "less_or_equal",
+            "columns": [
+              "assigned_date",
+              "completion_date"
+            ],
+            "values": [],
+            "minimum": null,
+            "maximum": null,
+            "tolerance": 1e-09,
+            "description": "assigned_date must be before or equal to completion_date",
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed this constraint for 'tasks'; review its policy meaning.",
+              "reference": null,
+              "confirmed": false
+            }
+          }
+        ],
+        "source": {
+          "kind": "none",
+          "reference": null,
+          "upload_id": null,
+          "row_count": null,
+          "sha256": null
+        }
+      },
+      {
+        "name": "reports",
+        "rows": null,
+        "primary_key": "report_id",
+        "unique_keys": [],
+        "columns": [
+          {
+            "name": "report_id",
+            "type": "uuid",
+            "role": "identifier",
+            "description": "Report identifier",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'reports.report_id'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "assignment_id",
+            "type": "uuid",
+            "role": "foreign_key",
+            "description": "Reference to assignment",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed 'reports.assignment_id' as a relationship-owned foreign key.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "required_date",
+            "type": "date",
+            "role": "rule",
+            "description": "Date report is required",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "date_range",
+              "provider": null,
+              "prefix": "",
+              "start": "2023-01-01",
+              "end": "2023-12-31",
+              "values": [],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'reports.required_date'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "due_date",
+            "type": "date",
+            "role": "derived",
+            "description": "Report due date",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": {
+              "op": "add_days",
+              "args": [
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "required_date",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                },
+                {
+                  "op": null,
+                  "args": [],
+                  "col": null,
+                  "const": 7,
+                  "tz_offset_hours": 0.0
+                }
+              ],
+              "col": null,
+              "const": null,
+              "tz_offset_hours": 0.0
+            },
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'reports.due_date'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "submission_date",
+            "type": "date",
+            "role": "rule",
+            "description": "Date report submitted",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "date_range",
+              "provider": null,
+              "prefix": "",
+              "start": "2023-01-15",
+              "end": "2024-12-31",
+              "values": [],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'reports.submission_date'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "submission_status",
+            "type": "category",
+            "role": "rule",
+            "description": "Submission status",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "choice",
+              "provider": null,
+              "prefix": "",
+              "start": null,
+              "end": null,
+              "values": [
+                "Submitted",
+                "Late",
+                "Missing"
+              ],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'reports.submission_status'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "quality_score",
+            "type": "number",
+            "role": "rule",
+            "description": "Report quality score",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": {
+              "kind": "number_range",
+              "provider": null,
+              "prefix": "",
+              "start": 0,
+              "end": 100,
+              "values": [],
+              "weights": [],
+              "mean": null,
+              "stddev": null,
+              "phi": null,
+              "decimals": null
+            },
+            "formula": null,
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'reports.quality_score'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          },
+          {
+            "name": "report_lag_days",
+            "type": "number",
+            "role": "derived",
+            "description": "Days between required and submission",
+            "nullable": false,
+            "null_fraction": 0.0,
+            "minimum": null,
+            "maximum": null,
+            "allowed_values": null,
+            "constant_value": null,
+            "rule": null,
+            "formula": {
+              "op": "sub",
+              "args": [
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "submission_date",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                },
+                {
+                  "op": null,
+                  "args": [],
+                  "col": "required_date",
+                  "const": null,
+                  "tz_offset_hours": 0.0
+                }
+              ],
+              "col": null,
+              "const": null,
+              "tz_offset_hours": 0.0
+            },
+            "source_expression": null,
+            "sensitive": false,
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed how to create 'reports.report_lag_days'. Review its values, bounds and meaning; no organizational policy or distribution was supplied.",
+              "reference": null,
+              "confirmed": false
+            }
+          }
+        ],
+        "constraints": [
+          {
+            "operator": "less_or_equal",
+            "columns": [
+              "required_date",
+              "due_date"
+            ],
+            "values": [],
+            "minimum": null,
+            "maximum": null,
+            "tolerance": 1e-09,
+            "description": "required_date must be before or equal to due_date",
+            "provenance": {
+              "origin": "assistant_proposed",
+              "detail": "The assistant proposed this constraint for 'reports'; review its policy meaning.",
+              "reference": null,
+              "confirmed": false
+            }
+          }
+        ],
+        "source": {
+          "kind": "none",
+          "reference": null,
+          "upload_id": null,
+          "row_count": null,
+          "sha256": null
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "parent_table": "employees",
+        "parent_key": "employee_id",
+        "child_table": "attendance",
+        "child_key": "employee_id",
+        "cardinality": "one_to_many",
+        "optional": false,
+        "null_fraction": 0.0,
+        "child_count_min": 200,
+        "child_count_max": 260,
+        "provenance": {
+          "origin": "assistant_proposed",
+          "detail": "The assistant proposed employees->attendance; review the 200..260 children-per-parent bounds.",
+          "reference": null,
+          "confirmed": false
+        }
+      },
+      {
+        "parent_table": "employees",
+        "parent_key": "employee_id",
+        "child_table": "project_assignments",
+        "child_key": "employee_id",
+        "cardinality": "one_to_many",
+        "optional": false,
+        "null_fraction": 0.0,
+        "child_count_min": 1,
+        "child_count_max": 8,
+        "provenance": {
+          "origin": "assistant_proposed",
+          "detail": "The assistant proposed employees->project_assignments; review the 1..8 children-per-parent bounds.",
+          "reference": null,
+          "confirmed": false
+        }
+      },
+      {
+        "parent_table": "projects",
+        "parent_key": "project_id",
+        "child_table": "project_assignments",
+        "child_key": "project_id",
+        "cardinality": "one_to_many",
+        "optional": false,
+        "null_fraction": 0.0,
+        "child_count_min": 1,
+        "child_count_max": 20,
+        "provenance": {
+          "origin": "assistant_proposed",
+          "detail": "The assistant proposed projects->project_assignments; review the 1..20 children-per-parent bounds.",
+          "reference": null,
+          "confirmed": false
+        }
+      },
+      {
+        "parent_table": "project_assignments",
+        "parent_key": "assignment_id",
+        "child_table": "tasks",
+        "child_key": "assignment_id",
+        "cardinality": "one_to_many",
+        "optional": false,
+        "null_fraction": 0.0,
+        "child_count_min": 1,
+        "child_count_max": 10,
+        "provenance": {
+          "origin": "assistant_proposed",
+          "detail": "The assistant proposed project_assignments->tasks; review the 1..10 children-per-parent bounds.",
+          "reference": null,
+          "confirmed": false
+        }
+      },
+      {
+        "parent_table": "project_assignments",
+        "parent_key": "assignment_id",
+        "child_table": "reports",
+        "child_key": "assignment_id",
+        "cardinality": "one_to_many",
+        "optional": false,
+        "null_fraction": 0.0,
+        "child_count_min": 1,
+        "child_count_max": 5,
+        "provenance": {
+          "origin": "assistant_proposed",
+          "detail": "The assistant proposed project_assignments->reports; review the 1..5 children-per-parent bounds.",
+          "reference": null,
+          "confirmed": false
+        }
+      }
+    ],
+    "aggregates": [],
+    "cross_table_constraints": [],
+    "privacy": {
+      "protected_entity": null,
+      "mechanism": "none",
+      "epsilon": null,
+      "release_claim_permitted": false,
+      "notes": ""
+    },
+    "evaluation": {
+      "checks": [
+        "schema",
+        "constraints",
+        "cardinality"
+      ],
+      "target": null,
+      "task": null,
+      "split": "random",
+      "split_column": null,
+      "test_fraction": 0.25
+    }
+  },
+  "generated_summary": {
+    "tables": 6,
+    "total_rows": 130795,
+    "all_constraints_passed": true,
+    "incomplete_tables": [],
+    "open_assumptions": 60,
+    "elapsed_seconds": 1.6672
+  },
+  "generated_rows": {
+    "employees": 500,
+    "projects": 100,
+    "attendance": 114687,
+    "project_assignments": 1645,
+    "reports": 4861,
+    "tasks": 9002
+  }
 }

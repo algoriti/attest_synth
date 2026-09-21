@@ -1,0 +1,13 @@
+{
+  "proposal_tables": [
+    "employees",
+    "attendance",
+    "projects",
+    "project_assignments",
+    "tasks",
+    "reports"
+  ],
+  "downloaded_file": "employees.csv",
+  "downloaded_bytes": 38201,
+  "page_errors": []
+}

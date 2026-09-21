@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test:workflow": "node tests/workflow.cjs playwright",
+    "test:assistant-workflow": "node tests/assistant-workflow.cjs playwright",
     "test:ui": "node tests/ui-review.cjs",
     "test:a11y": "node tests/accessibility-audit.cjs"
   },
